@@ -6,5 +6,6 @@
         org.slf4j/jcl-over-slf4j {:mvn/version "1.7.26"}
         org.slf4j/log4j-over-slf4j {:mvn/version "1.7.26"}}
  :resource-paths ["config" "resources"]
+ :paths ["src"]
  :aliases {:uberjar {:extra-deps {seancorfield/depstar {:mvn/version "0.5.2"}}
                      :main-opts ["-m" "hf.depstar.uberjar" "dist/authfed.jar"]}}}

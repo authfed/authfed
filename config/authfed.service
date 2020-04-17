@@ -1,0 +1,15 @@
+[Unit]
+Description=authfed - auth federation system for web-apps
+Documentation=http://www.authfed.com/
+After=network-online.target remote-fs.target nss-lookup.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+EnvironmentFile=/etc/sysconfig/authfed
+ExecStart=/bin/java -cp /opt/authfed/authfed.jar clojure.main -m authfed.server
+ExecReload=/bin/kill -s HUP $MAINPID
+ExecStop=/bin/kill -s TERM $MAINPID
+
+[Install]
+WantedBy=multi-user.target
