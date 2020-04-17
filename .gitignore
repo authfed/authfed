@@ -24,6 +24,7 @@ repl-port
 .*.swo
 *.tmp
 *.bak
+.cpcache/
 
 # OS X
 .DS_Store
@@ -35,4 +36,4 @@ repl-port
 # Builds
 out/
 build/
-
+dist/
