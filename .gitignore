@@ -37,3 +37,6 @@ repl-port
 out/
 build/
 dist/
+
+# Terraform
+terraform.tfstate*
