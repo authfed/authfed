@@ -7,7 +7,7 @@ Wants=network-online.target
 [Service]
 Type=simple
 EnvironmentFile=/etc/sysconfig/authfed
-ExecStart=/bin/java -cp /opt/authfed/authfed.jar clojure.main -m authfed.server
+ExecStart=/bin/java -cp /opt/authfed/authfed.jar $JAVA_OPTS clojure.main -m authfed.server
 ExecReload=/bin/kill -s HUP $MAINPID
 ExecStop=/bin/kill -s TERM $MAINPID
 User=authfed
