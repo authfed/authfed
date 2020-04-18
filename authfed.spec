@@ -19,6 +19,12 @@ Auth federation system for web-apps.
 %prep
 make %{jar}
 
+%pre
+getent group %{name} >/dev/null || groupadd -r %{name}
+getent passwd %{name} >/dev/null || \
+    useradd -r -g %{name} -d %{_optdir}/%{name} -s /sbin/nologin %{name}
+exit 0
+
 %install
 rm -rf %{buildroot}
 install -d %{buildroot}%{_optdir}/%{name}

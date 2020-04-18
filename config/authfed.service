@@ -10,6 +10,8 @@ EnvironmentFile=/etc/sysconfig/authfed
 ExecStart=/bin/java -cp /opt/authfed/authfed.jar clojure.main -m authfed.server
 ExecReload=/bin/kill -s HUP $MAINPID
 ExecStop=/bin/kill -s TERM $MAINPID
+User=authfed
+Group=authfed
 
 [Install]
 WantedBy=multi-user.target
