@@ -13,7 +13,7 @@
 
     <rollingPolicy class="ch.qos.logback.core.rolling.SizeAndTimeBasedRollingPolicy">
       <!-- rollover daily -->
-      <fileNamePattern>/var/log/authfed/authfed-%d{yyyy-MM-dd}.%i.log</fileNamePattern>
+      <fileNamePattern>logs/authfed-%d{yyyy-MM-dd}.%i.log</fileNamePattern>
       <!-- or whenever the file size reaches 64 MB -->
       <maxFileSize>64 MB</maxFileSize>
     </rollingPolicy>
@@ -29,9 +29,9 @@
     <encoder>
       <pattern>%-5level %logger{36} %X{io.pedestal} - %msg%n</pattern>
     </encoder>
-    <!-- Only log level WARN and above -->
+    <!-- Only log level INFO and above -->
     <filter class="ch.qos.logback.classic.filter.ThresholdFilter">
-      <level>WARN</level>
+      <level>INFO</level>
     </filter>
   </appender>
 
