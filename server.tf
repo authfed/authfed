@@ -38,10 +38,14 @@ data "aws_ami" "centos" {
 #  ami           = data.aws_ami.amzn2.id
 #  instance_type = "t3.small"
 #
-##  user_data =<<EOF
-###!bin/bash
+#  user_data =<<EOF
+##!bin/bash
+#yum makecache fast
+#yum install rpm-build
+#yum install java-headless
 ##useradd -o -u 1000 -g 1000 -d /home/centos -M ec2-user
-##EOF
+#sudo -u ec2-user bash -c "mkdir ~/authfed"
+#EOF
 #
 #  tags = {
 #    Name = "authfed"
