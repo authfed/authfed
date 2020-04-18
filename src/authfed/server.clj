@@ -32,7 +32,7 @@
 (defn -main
   "The entry-point for 'lein run'"
   [& args]
-  (println "\nCreating your server...")
+  (println "\nCreating your server... see logs in /var/log/authfed/")
   (server/start runnable-service))
 
 ;; If you package the service up as a WAR,
@@ -53,4 +53,3 @@
 ;;  [_]
 ;;  (server/servlet-destroy @servlet)
 ;;  (reset! servlet nil))
-
