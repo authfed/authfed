@@ -28,6 +28,7 @@ exit 0
 %install
 rm -rf %{buildroot}
 install -d %{buildroot}%{_optdir}/%{name}
+install -d %{buildroot}%{_var}/log/%{name}
 install -d %{buildroot}%{_sysconfdir}/%{name}
 install -d %{buildroot}%{_sysconfdir}/sysconfig
 install -d %{buildroot}%{_unitdir}
@@ -41,6 +42,7 @@ rm -rf %{buildroot}
 
 %files
 %dir %attr(0755, root, root) %{_optdir}/%{name}
+%dir %attr(0755, %{name}, %{name}) %{_var}/log/%{name}
 %dir %attr(0755, root, root) %{_sysconfdir}/%{name}
 %attr(0644, root, root) %{_optdir}/%{name}/%{jar}
 %attr(0644, root, root) %{_sysconfdir}/sysconfig/%{name}
