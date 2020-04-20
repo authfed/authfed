@@ -22,3 +22,7 @@ I recommend adding something like this to your ~/.clojure/deps.edn file under {:
 ## Logging
 
 To learn more about configuring Logback see http://logback.qos.ch/documentation.html
+
+## License
+
+Eclipse Public License v1.0, see LICENSE file.
