@@ -35,16 +35,17 @@ data "aws_ami" "centos" {
 }
 
 #resource "aws_instance" "server" {
-#  ami           = data.aws_ami.amzn2.id
+#  ami           = data.aws_ami.centos.id
 #  instance_type = "t3.small"
 #
 #  user_data =<<EOF
 ##!bin/bash
-#yum makecache fast
-#yum install rpm-build
-#yum install java-headless
-##useradd -o -u 1000 -g 1000 -d /home/centos -M ec2-user
+#useradd -o -u 1000 -g 1000 -d /home/centos -M ec2-user
 #sudo -u ec2-user bash -c "mkdir ~/authfed"
+#yum makecache fast
+#yum install -y rpm-build
+#yum install -y java-headless
+## https://github.com/riemann/riemann/releases/download/0.3.5/riemann-0.3.5-1.noarch-EL7.rpm
 #EOF
 #
 #  tags = {
