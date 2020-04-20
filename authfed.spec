@@ -41,12 +41,12 @@ install -p -m 0644 %{name}.service %{buildroot}%{_unitdir}/%{name}.service
 rm -rf %{buildroot}
 
 %files
-%dir %attr(0755, root, root) %{_optdir}/%{name}
+%dir %attr(0755, %{name}, %{name}) %{_optdir}/%{name}
 %dir %attr(0755, %{name}, %{name}) %{_var}/log/%{name}
-%dir %attr(0755, root, root) %{_sysconfdir}/%{name}
-%attr(0644, root, root) %{_optdir}/%{name}/%{jar}
+%dir %attr(0755, %{name}, %{name}) %{_sysconfdir}/%{name}
+%attr(0644, %{name}, %{name}) %{_optdir}/%{name}/%{jar}
+%attr(0644, %{name}, %{name}) %{_sysconfdir}/%{name}/logback.xml
 %attr(0644, root, root) %{_sysconfdir}/sysconfig/%{name}
-%attr(0644, root, root) %{_sysconfdir}/%{name}/logback.xml
 %attr(0644, root, root) %{_unitdir}/%{name}.service
 
 %changelog
