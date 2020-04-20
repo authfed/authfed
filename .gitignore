@@ -40,3 +40,4 @@ dist/
 
 # Terraform
 terraform.tfstate*
+.terraform/
