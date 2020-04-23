@@ -37,7 +37,7 @@
     (.setKeyStorePassword context keystore-password)
     (.setCipherComparator context HTTP2Cipher/COMPARATOR)
     (.setUseCipherSuitesOrder context true)
-    context)))
+    context))
 
 (def service
   {:env :prod
