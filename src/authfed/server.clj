@@ -1,58 +1,65 @@
 (ns authfed.server
   (:gen-class) ; for -main method in uberjar
-  (:require [io.pedestal.http :as server]
+  (:import [org.eclipse.jetty.util.ssl SslContextFactory]
+           [org.eclipse.jetty.http2 HTTP2Cipher])
+  (:require [io.pedestal.http :as http]
             [io.pedestal.http.route :as route]
-            [authfed.service :as service]))
+            [less.awful.ssl]
+            [io.pedestal.http.body-params :as body-params]
+            [ring.util.response :as ring-resp]))
 
-;; This is an adapted service map, that can be started and stopped
-;; From the REPL you can call server/start and server/stop on this service
-(defonce runnable-service
-  (-> service/service
-    (assoc ::server/routes #(route/expand-routes (deref #'service/routes)))
-    server/create-server))
+(defn about-page
+  [request]
+  (ring-resp/response (format "Clojure %s - served from %s"
+                              (clojure-version)
+                              (route/url-for ::about-page))))
 
-(defn run-dev
-  "The entry-point for 'lein run-dev'"
-  [& args]
-  (println "\nCreating your [DEV] server...")
-  (-> service/service ;; start with production configuration
-      (merge {:env :dev
-              ;; do not block thread that starts web server
-              ::server/join? false
-              ;; Routes can be a function that resolve routes,
-              ;;  we can use this to set the routes to be reloadable
-              ::server/routes #(route/expand-routes (deref #'service/routes))
-              ;; all origins are allowed in dev mode
-              ::server/allowed-origins {:creds true :allowed-origins (constantly true)}
-              ;; Content Security Policy (CSP) is mostly turned off in dev mode
-              ::server/secure-headers {:content-security-policy-settings {:object-src "'none'"}}})
-      ;; Wire up interceptor chains
-      server/default-interceptors
-      server/dev-interceptors
-      server/create-server
-      server/start))
+(defn home-page
+  [request]
+  (ring-resp/response "Hello World!"))
+
+(def common-interceptors [(body-params/body-params) http/html-body])
+
+(def routes #{["/" :get (conj common-interceptors `home-page)]
+              ["/about" :get (conj common-interceptors `about-page)]})
+
+(def keystore-password (apply str less.awful.ssl/key-store-password))
+(def keystore-instance
+  (less.awful.ssl/key-store "./letsencrypt/live/authfed.net/privkey.pem"
+                            "./letsencrypt/live/authfed.net/fullchain.pem"))
+
+; (.setKeyEntry keystore-instance "cert2" (less.awful.ssl/private-key "./letsencrypt/live/authfed.com/privkey.pem") less.awful.ssl/key-store-password (less.awful.ssl/load-certificate-chain "./letsencrypt/live/authfed.com/fullchain.pem"))
+; (.reload ssl-context-factory (reify java.util.function.Consumer (accept [this _] _)))
+
+(def ssl-context-factory
+  (let [^SslContextFactory context (SslContextFactory.)]
+    (.setKeyStore context keystore-instance)
+    (.setKeyStorePassword context keystore-password)
+    (.setCipherComparator context HTTP2Cipher/COMPARATOR)
+    (.setUseCipherSuitesOrder context true)
+    context)))
+
+(def service
+  {:env :prod
+   ::http/routes routes
+   ::http/resource-path "/public"
+   ::http/type :jetty
+   ::http/host "0.0.0.0"
+   ::http/port 8080
+   ::http/container-options {:h2c? true
+                             :h2? false
+                             :ssl-context-factory ssl-context-factory
+                             :ssl-port 8443
+                             :ssl? true}})
+
+(def runnable
+  (-> service
+    (assoc ::http/routes #(route/expand-routes (deref #'routes)))
+    (assoc ::http/join? false)
+    http/create-server))
 
 (defn -main
   "The entry-point for 'lein run'"
   [& args]
   (println "\nCreating your server... see logs in /var/log/authfed/")
-  (server/start runnable-service))
-
-;; If you package the service up as a WAR,
-;; some form of the following function sections is required (for io.pedestal.servlet.ClojureVarServlet).
-
-;;(defonce servlet  (atom nil))
-;;
-;;(defn servlet-init
-;;  [_ config]
-;;  ;; Initialize your app here.
-;;  (reset! servlet  (server/servlet-init service/service nil)))
-;;
-;;(defn servlet-service
-;;  [_ request response]
-;;  (server/servlet-service @servlet request response))
-;;
-;;(defn servlet-destroy
-;;  [_]
-;;  (server/servlet-destroy @servlet)
-;;  (reset! servlet nil))
+  (http/start runnable))
