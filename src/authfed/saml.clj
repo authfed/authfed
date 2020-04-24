@@ -7,10 +7,10 @@
 ;(alias-uri 'xs "http://www.w3.org/2001/XMLSchema")
 ;(alias-uri 'ds "http://www.w3.org/2000/09/xmldsig#")
 
-(def request-id (java.util.UUID/randomUUID))
-(def response-id (java.util.UUID/randomUUID))
-(def assertion-id (java.util.UUID/randomUUID))
-(def session-id (java.util.UUID/randomUUID))
+(def request-id (str "request-" (java.util.UUID/randomUUID)))
+(def response-id (str "response-" (java.util.UUID/randomUUID)))
+(def assertion-id (str "assertion-" (java.util.UUID/randomUUID)))
+(def session-id (str "session-" (java.util.UUID/randomUUID)))
 
 (def now (java.time.Instant/now))
 (def recent (.minusSeconds now (* 30))) ;; thirty seconds
@@ -22,14 +22,15 @@
   :attrs
   {:xmlns/saml "urn:oasis:names:tc:SAML:2.0:assertion"
    :xmlns/samlp "urn:oasis:names:tc:SAML:2.0:protocol"
-   :ID (str response-id)
+   :ID response-id
    :Version "2.0"
    :IssueInstant (str now)
    :Destination "http://sp.example.com/demo1/index.php?acs"
-   :InResponseTo (str request-id)}
+   :InResponseTo request-id}
   :content
-  [{:tag ::saml/Issuer
-    :content ["http://idp.example.com/metadata.php"]}
+  [
+   ; {:tag ::saml/Issuer
+   ;  :content ["http://idp.example.com/metadata.php"]}
    {:tag ::samlp/Status
     :content
     [{:tag
@@ -38,8 +39,8 @@
    {:tag ::saml/Assertion
     :attrs
     {:xmlns/xsi "http://www.w3.org/2001/XMLSchema-instance"
-;     :xmlns/xs "http://www.w3.org/2001/XMLSchema"
-     :ID (str assertion-id)
+     :xmlns/xs "http://www.w3.org/2001/XMLSchema"
+     :ID assertion-id
      :Version "2.0"
      :IssueInstant (str now)}
     :content
@@ -60,7 +61,7 @@
           {:NotOnOrAfter (str soon)
            :Recipient "http://sp.example.com/demo1/index.php?acs"
            :InResponseTo
-           (str request-id)}}]}]}
+           request-id}}]}]}
      {:tag ::saml/Conditions
       :attrs {:NotBefore (str recent)
               :NotOnOrAfter (str soon)}
@@ -72,7 +73,7 @@
      {:tag ::saml/AuthnStatement
       :attrs {:AuthnInstant (str now)
               :SessionNotOnOrAfter (str later)
-              :SessionIndex (str session-id)}
+              :SessionIndex session-id}
       :content
       [{:tag ::saml/AuthnContext
         :content
