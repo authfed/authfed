@@ -5,7 +5,7 @@
 (alias-uri 'saml "urn:oasis:names:tc:SAML:2.0:assertion")
 (alias-uri 'xsi "http://www.w3.org/2001/XMLSchema-instance")
 ;(alias-uri 'xs "http://www.w3.org/2001/XMLSchema")
-(alias-uri 'ds "http://www.w3.org/2000/09/xmldsig#")
+;(alias-uri 'ds "http://www.w3.org/2000/09/xmldsig#")
 
 (def request-id (java.util.UUID/randomUUID))
 (def response-id (java.util.UUID/randomUUID))
@@ -20,7 +20,8 @@
 (defn saml-response []
  {:tag ::samlp/Response
   :attrs
-  {:xmlns/samlp "urn:oasis:names:tc:SAML:2.0:protocol"
+  {:xmlns/saml "urn:oasis:names:tc:SAML:2.0:assertion"
+   :xmlns/samlp "urn:oasis:names:tc:SAML:2.0:protocol"
    :ID (str response-id)
    :Version "2.0"
    :IssueInstant (str now)
@@ -36,7 +37,9 @@
       :attrs {:Value "urn:oasis:names:tc:SAML:2.0:status:Success"}}]}
    {:tag ::saml/Assertion
     :attrs
-    {:ID (str assertion-id)
+    {:xmlns/xsi "http://www.w3.org/2001/XMLSchema-instance"
+;     :xmlns/xs "http://www.w3.org/2001/XMLSchema"
+     :ID (str assertion-id)
      :Version "2.0"
      :IssueInstant (str now)}
     :content
