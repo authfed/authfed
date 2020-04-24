@@ -42,43 +42,6 @@
     :content
     [{:tag ::saml/Issuer
       :content ["http://idp.example.com/metadata.php"]}
-     {:tag ::ds/Signature
-      :content
-      [{:tag ::ds/SignedInfo
-        :content
-        [{:tag ::ds/CanonicalizationMethod
-          :attrs {:Algorithm "http://www.w3.org/2001/10/xml-exc-c14n#"}}
-         {:tag ::ds/SignatureMethod
-          :attrs
-          {:Algorithm "http://www.w3.org/2000/09/xmldsig#rsa-sha1"}}
-         {:tag ::ds/Reference
-          :attrs {:URI (str "#" assertion-id)}
-          :content
-          [{:tag ::ds/Transforms
-            :content
-            [{:tag ::ds/Transform
-              :attrs
-              {:Algorithm
-               "http://www.w3.org/2000/09/xmldsig#enveloped-signature"}}
-             {:tag ::ds/Transform
-              :attrs
-              {:Algorithm "http://www.w3.org/2001/10/xml-exc-c14n#"}}]}
-           {:tag ::ds/DigestMethod
-            :attrs
-            {:Algorithm "http://www.w3.org/2000/09/xmldsig#sha1"}}
-           {:tag
-            ::ds/DigestValue
-            :content ["Ce09qG1evimyJM9gho4hfnGEMVA="]}]}]}
-       {:tag ::ds/SignatureValue
-        :content
-        ["ZYL+qLfxxxddyHvAE6a4rbhCPGXk2JPSCvTRx7vgRtGlW1AscRMlmvDKzJlJa9Xx7GYSfnS+BhxjRoIm1Q0DzBiFeY9Jndkf1836EpcBMclTrn0Q6AtZHcUR/enWBSb/JmUWPS7QLc5/yhWi5SE2nrwuQbAcJZD2GM08PxG2aZs="]}
-       {:tag ::ds/KeyInfo
-        :content
-        [{:tag ::ds/X509Data
-          :content
-          [{:tag ::ds/X509Certificate
-            :content
-            ["MIICajCCAdOgAwIBAgIBADANBgkqhkiG9w0BAQ0FADBSMQswCQYDVQQGEwJ1czETMBEGA1UECAwKQ2FsaWZvcm5pYTEVMBMGA1UECgwMT25lbG9naW4gSW5jMRcwFQYDVQQDDA5zcC5leGFtcGxlLmNvbTAeFw0xNDA3MTcxNDEyNTZaFw0xNTA3MTcxNDEyNTZaMFIxCzAJBgNVBAYTAnVzMRMwEQYDVQQIDApDYWxpZm9ybmlhMRUwEwYDVQQKDAxPbmVsb2dpbiBJbmMxFzAVBgNVBAMMDnNwLmV4YW1wbGUuY29tMIGfMA0GCSqGSIb3DQEBAQUAA4GNADCBiQKBgQDZx+ON4IUoIWxgukTb1tOiX3bMYzYQiwWPUNMp+Fq82xoNogso2bykZG0yiJm5o8zv/sd6pGouayMgkx/2FSOdc36T0jGbCHuRSbtia0PEzNIRtmViMrt3AeoWBidRXmZsxCNLwgIV6dn2WpuE5Az0bHgpZnQxTKFek0BMKU/d8wIDAQABo1AwTjAdBgNVHQ4EFgQUGHxYqZYyX7cTxKVODVgZwSTdCnwwHwYDVR0jBBgwFoAUGHxYqZYyX7cTxKVODVgZwSTdCnwwDAYDVR0TBAUwAwEB/zANBgkqhkiG9w0BAQ0FAAOBgQByFOl+hMFICbd3DJfnp2Rgd/dqttsZG/tyhILWvErbio/DEe98mXpowhTkC04ENprOyXi7ZbUqiicF89uAGyt1oqgTUCD1VsLahqIcmrzgumNyTwLGWo17WDAa1/usDhetWAMhgzF/Cnf5ek0nK00m0YZGyc4LzgD0CROMASTWNg=="]}]}]}]}
      {:tag ::saml/Subject
       :content
       [{:tag ::saml/NameID
