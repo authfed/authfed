@@ -20,10 +20,10 @@
 ;(alias-uri 'xs "http://www.w3.org/2001/XMLSchema")
 ;(alias-uri 'ds "http://www.w3.org/2000/09/xmldsig#")
 
-(def idp-entityid "http://idp.example.com/metadata.php") ;; IdP EntityId
-(def sp-entityid "http://sp.example.com/demo1/metadata.php") ;; SP EntityId
-(def sp-endpoint "http://sp.example.com/demo1/index.php?acs") ;; SP Attribute Consume Service Endpoint
-(def target-url "http://sp.example.com/demo1/index.php?acs") ;; Target URL, Destination of the Response
+(def idp-entityid "https://authfed.net") ;; IdP EntityId
+(def sp-entityid "https://signin.aws.amazon.com/saml") ;; SP EntityId
+(def sp-endpoint "https://signin.aws.amazon.com/saml") ;; SP Attribute Consume Service Endpoint
+(def target-url "https://signin.aws.amazon.com/saml") ;; Target URL, Destination of the Response
 
 (defn saml-response []
  (let [request-id (str "request-" (java.util.UUID/randomUUID))
@@ -111,6 +111,18 @@
            :attrs #::xsi{:type "xs:string"}
            :content ["test@example.com"]}]}
         {:tag ::saml/Attribute
+         :attrs {:Name "https://aws.amazon.com/SAML/Attributes/RoleSessionName"}
+         :content
+         [{:tag ::saml/AttributeValue
+           :attrs #::xsi{:type "xs:string"}
+           :content ["test@example.com"]}]}
+        {:tag ::saml/Attribute
+         :attrs {:Name "https://aws.amazon.com/SAML/Attributes/Role"}
+         :content
+         [{:tag ::saml/AttributeValue
+           :attrs #::xsi{:type "xs:string"}
+           :content ["arn:aws:iam::1234:role/test20200424,arn:aws:iam::1234:saml-provider/authfed-net"]}]}
+        {:tag ::saml/Attribute
          :attrs
          {:Name "eduPersonAffiliation"
           :NameFormat "urn:oasis:names:tc:SAML:2.0:attrname-format:basic"}
@@ -178,5 +190,9 @@
 (ns authfed.saml)
 (use 'clojure.repl 'clojure.pprint 'clojure.java.javadoc)
 (println (sign-and-serialize (saml-response)))
+
+(require 'ring.util.codec)
+(let [samlresponse (sign-and-serialize (saml-response))] (spit "test.html" (str "<form method=\"POST\" action=\"https://signin.aws.amazon.com/saml\"><input type=\"hidden\" name=\"SAMLResponse\" value=" (ring.util.codec/base64-encode (.getBytes samlresponse)) " /><input type=\"submit\" value=\"Submit\" /></form>")))
+;; open -a /Applications/Safari.app
 
 )

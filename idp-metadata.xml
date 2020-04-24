@@ -1,0 +1,22 @@
+<?xml version="1.0"?>
+<md:EntityDescriptor xmlns:md="urn:oasis:names:tc:SAML:2.0:metadata" validUntil="2020-04-25T09:42:35Z" cacheDuration="PT1588239755S" entityID="https://authfed.net">
+  <md:IDPSSODescriptor WantAuthnRequestsSigned="false" protocolSupportEnumeration="urn:oasis:names:tc:SAML:2.0:protocol">
+    <md:KeyDescriptor use="signing">
+      <ds:KeyInfo xmlns:ds="http://www.w3.org/2000/09/xmldsig#">
+        <ds:X509Data>
+          <ds:X509Certificate>MIIESzCCAzOgAwIBAgIJAMxM/5+DiA+tMA0GCSqGSIb3DQEBCwUAMIG7MQswCQYDVQQGEwItLTESMBAGA1UECAwJU29tZVN0YXRlMREwDwYDVQQHDAhTb21lQ2l0eTEZMBcGA1UECgwQU29tZU9yZ2FuaXphdGlvbjEfMB0GA1UECwwWU29tZU9yZ2FuaXphdGlvbmFsVW5pdDEeMBwGA1UEAwwVbG9jYWxob3N0LmxvY2FsZG9tYWluMSkwJwYJKoZIhvcNAQkBFhpyb290QGxvY2FsaG9zdC5sb2NhbGRvbWFpbjAeFw0yMDA0MjEwOTQ3MzdaFw0yMTA0MjEwOTQ3MzdaMIG7MQswCQYDVQQGEwItLTESMBAGA1UECAwJU29tZVN0YXRlMREwDwYDVQQHDAhTb21lQ2l0eTEZMBcGA1UECgwQU29tZU9yZ2FuaXphdGlvbjEfMB0GA1UECwwWU29tZU9yZ2FuaXphdGlvbmFsVW5pdDEeMBwGA1UEAwwVbG9jYWxob3N0LmxvY2FsZG9tYWluMSkwJwYJKoZIhvcNAQkBFhpyb290QGxvY2FsaG9zdC5sb2NhbGRvbWFpbjCCASIwDQYJKoZIhvcNAQEBBQADggEPADCCAQoCggEBAL/a20gEK1Q174VqiM+92bpNY81fZ4fMTOAGecNUfYtNAKZzdXh+Y9wWPekNfmn9BgSTpc8iAFwEqN/usp3eGI9ME1oiLR6CW8rsAA37G+rkgn3zPK+/kBeqIboq4sTju1Rcy1MUA8cXxO1VlPNAVCDmPABc1quHOKbLtzPo1ddyTO2XPWaSNZXEKSX3ecnPzNig+Q9DG2IM+KJlcLGuo0heXq5SLUbWDohv03h+rsoNgvXdZBAkvTd+3ETO3K3HPB1y2qpnXPblhOJzXtWVydpKRvZzVCXJxEgqE4xfstzY8WnSkyNusHreIyNdI6gcL4qHS88NbUIJSTl7WpsyPx8CAwEAAaNQME4wHQYDVR0OBBYEFHK3NRxhLaDaP+X1g+7OFY7VSlhwMB8GA1UdIwQYMBaAFHK3NRxhLaDaP+X1g+7OFY7VSlhwMAwGA1UdEwQFMAMBAf8wDQYJKoZIhvcNAQELBQADggEBACz0il+1AtKrGECJcH9xwcSV7Whet8x+nPFbZ6s5Hzo7jKm63xuFCp5j4ThR0nJeNqP54y1iwQ4hfwwoDQvIZzX+VZ9MDwLuGHwxhEfyoaeNhJuzdDLSRs3wKbKhh0SiDQErdI0D/vQvqE1KmiSwNFgjDSq29NYzIfubWPLaUVM71tMICu91s41dOIqgTeW1Wh7L5mkv6wKcqjq7XYx2UL8tUjlDLXBL0y89bTpuMeQdXWA79RQFGl3oJaOYXuhKpFYmjmbc5YeULmVxA3h5YjuuAeYcXSVFdl73muQqiJZM0LEtwzCHnbzX4ZDtuPDgAlC2qlZ8AxBX75q1gJJ2UCo=</ds:X509Certificate>
+        </ds:X509Data>
+      </ds:KeyInfo>
+    </md:KeyDescriptor>
+    <md:KeyDescriptor use="encryption">
+      <ds:KeyInfo xmlns:ds="http://www.w3.org/2000/09/xmldsig#">
+        <ds:X509Data>
+          <ds:X509Certificate>MIIESzCCAzOgAwIBAgIJAMxM/5+DiA+tMA0GCSqGSIb3DQEBCwUAMIG7MQswCQYDVQQGEwItLTESMBAGA1UECAwJU29tZVN0YXRlMREwDwYDVQQHDAhTb21lQ2l0eTEZMBcGA1UECgwQU29tZU9yZ2FuaXphdGlvbjEfMB0GA1UECwwWU29tZU9yZ2FuaXphdGlvbmFsVW5pdDEeMBwGA1UEAwwVbG9jYWxob3N0LmxvY2FsZG9tYWluMSkwJwYJKoZIhvcNAQkBFhpyb290QGxvY2FsaG9zdC5sb2NhbGRvbWFpbjAeFw0yMDA0MjEwOTQ3MzdaFw0yMTA0MjEwOTQ3MzdaMIG7MQswCQYDVQQGEwItLTESMBAGA1UECAwJU29tZVN0YXRlMREwDwYDVQQHDAhTb21lQ2l0eTEZMBcGA1UECgwQU29tZU9yZ2FuaXphdGlvbjEfMB0GA1UECwwWU29tZU9yZ2FuaXphdGlvbmFsVW5pdDEeMBwGA1UEAwwVbG9jYWxob3N0LmxvY2FsZG9tYWluMSkwJwYJKoZIhvcNAQkBFhpyb290QGxvY2FsaG9zdC5sb2NhbGRvbWFpbjCCASIwDQYJKoZIhvcNAQEBBQADggEPADCCAQoCggEBAL/a20gEK1Q174VqiM+92bpNY81fZ4fMTOAGecNUfYtNAKZzdXh+Y9wWPekNfmn9BgSTpc8iAFwEqN/usp3eGI9ME1oiLR6CW8rsAA37G+rkgn3zPK+/kBeqIboq4sTju1Rcy1MUA8cXxO1VlPNAVCDmPABc1quHOKbLtzPo1ddyTO2XPWaSNZXEKSX3ecnPzNig+Q9DG2IM+KJlcLGuo0heXq5SLUbWDohv03h+rsoNgvXdZBAkvTd+3ETO3K3HPB1y2qpnXPblhOJzXtWVydpKRvZzVCXJxEgqE4xfstzY8WnSkyNusHreIyNdI6gcL4qHS88NbUIJSTl7WpsyPx8CAwEAAaNQME4wHQYDVR0OBBYEFHK3NRxhLaDaP+X1g+7OFY7VSlhwMB8GA1UdIwQYMBaAFHK3NRxhLaDaP+X1g+7OFY7VSlhwMAwGA1UdEwQFMAMBAf8wDQYJKoZIhvcNAQELBQADggEBACz0il+1AtKrGECJcH9xwcSV7Whet8x+nPFbZ6s5Hzo7jKm63xuFCp5j4ThR0nJeNqP54y1iwQ4hfwwoDQvIZzX+VZ9MDwLuGHwxhEfyoaeNhJuzdDLSRs3wKbKhh0SiDQErdI0D/vQvqE1KmiSwNFgjDSq29NYzIfubWPLaUVM71tMICu91s41dOIqgTeW1Wh7L5mkv6wKcqjq7XYx2UL8tUjlDLXBL0y89bTpuMeQdXWA79RQFGl3oJaOYXuhKpFYmjmbc5YeULmVxA3h5YjuuAeYcXSVFdl73muQqiJZM0LEtwzCHnbzX4ZDtuPDgAlC2qlZ8AxBX75q1gJJ2UCo=</ds:X509Certificate>
+        </ds:X509Data>
+      </ds:KeyInfo>
+    </md:KeyDescriptor>
+    <md:SingleLogoutService Binding="urn:oasis:names:tc:SAML:2.0:bindings:HTTP-Redirect" Location="https://authfed.net/logout"/>
+    <md:NameIDFormat>urn:oasis:names:tc:SAML:1.1:nameid-format:unspecified</md:NameIDFormat>
+    <md:SingleSignOnService Binding="urn:oasis:names:tc:SAML:2.0:bindings:HTTP-Redirect" Location="https://authfed.net/login"/>
+  </md:IDPSSODescriptor>
+</md:EntityDescriptor>
