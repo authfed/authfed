@@ -6,6 +6,8 @@
             [io.pedestal.http.route :as route]
             [less.awful.ssl]
             [io.pedestal.http.body-params :as body-params]
+            [authfed.saml :as saml]
+            [ring.util.codec :as codec]
             [ring.util.response :as ring-resp]))
 
 (defn about-page
@@ -14,6 +16,11 @@
                               (clojure-version)
                               (route/url-for ::about-page))))
 
+(defn login-page
+  [request]
+  (let [samlresponse (saml/sign-and-serialize (saml/saml-response))]
+    (ring-resp/response (str "<form method=\"POST\" action=\"https://signin.aws.amazon.com/saml\"><input type=\"hidden\" name=\"SAMLResponse\" value=" (codec/base64-encode (.getBytes samlresponse)) " /><input type=\"submit\" value=\"Submit\" /></form>"))))
+
 (defn home-page
   [request]
   (ring-resp/response "Hello World!"))
@@ -21,6 +28,7 @@
 (def common-interceptors [(body-params/body-params) http/html-body])
 
 (def routes #{["/" :get (conj common-interceptors `home-page)]
+              ["/login" :get (conj common-interceptors `login-page)]
               ["/about" :get (conj common-interceptors `about-page)]})
 
 (def keystore-password (apply str less.awful.ssl/key-store-password))
