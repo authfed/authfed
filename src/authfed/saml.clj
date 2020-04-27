@@ -1,5 +1,6 @@
 (ns authfed.saml
   (:require [less.awful.ssl]
+            [authfed.config :as config]
             [clojure.data.xml :refer :all])
   (:import [javax.xml.crypto.dsig DigestMethod Transform XMLSignatureFactory CanonicalizationMethod]
            [javax.xml.crypto.dsig.dom DOMSignContext]
@@ -121,7 +122,7 @@
          :content
          [{:tag ::saml/AttributeValue
            :attrs #::xsi{:type "xs:string"}
-           :content ["arn:aws:iam::1234:role/test20200424,arn:aws:iam::1234:saml-provider/authfed-net"]}]}
+           :content [(::config/saml-role-mapping config/params)]}]}
         {:tag ::saml/Attribute
          :attrs
          {:Name "eduPersonAffiliation"

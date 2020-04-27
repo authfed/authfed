@@ -6,7 +6,14 @@
             [io.pedestal.http.route :as route]
             [less.awful.ssl]
             [io.pedestal.http.body-params :as body-params]
+            [io.pedestal.http.ring-middlewares :as middlewares]
             [authfed.saml :as saml]
+            [authfed.config :as config]
+            [authfed.template :as template]
+            [clojure.data.xml :as xml]
+            [clojure.java.io :as io]
+            [ring.middleware.resource :as resource]
+            [ring.middleware.session.cookie :as cookie]
             [ring.util.codec :as codec]
             [ring.util.response :as ring-resp]))
 
@@ -22,19 +29,29 @@
     (ring-resp/response (str "<form method=\"POST\" action=\"https://signin.aws.amazon.com/saml\"><input type=\"hidden\" name=\"SAMLResponse\" value=" (codec/base64-encode (.getBytes samlresponse)) " /><input type=\"submit\" value=\"Submit\" /></form>"))))
 
 (defn home-page
-  [request]
-  (ring-resp/response "Hello World!"))
+ [request]
+ (let [sid (get-in request [:session ::id] (str (java.util.UUID/randomUUID)))]
+  (-> (ring-resp/response [{:tag "p" :content "Hello World!"}
+                           {:tag "br"}
+                           {:tag "pre" :content (with-out-str (pprint (:session request)))}])
+   (update :body template/html)
+   (update :body xml/emit-str)
+   (assoc-in [:session ::id] sid))))
 
-(def common-interceptors [(body-params/body-params) http/html-body])
+(def common-interceptors
+ [(body-params/body-params)
+  http/html-body
+  (middlewares/session {:store (cookie/cookie-store)})])
 
 (def routes #{["/" :get (conj common-interceptors `home-page)]
+              ["/favicon.ico" :get (conj common-interceptors (middlewares/file-info) (middlewares/file "static"))]
               ["/login" :get (conj common-interceptors `login-page)]
               ["/about" :get (conj common-interceptors `about-page)]})
 
 (def keystore-password (apply str less.awful.ssl/key-store-password))
 (def keystore-instance
-  (less.awful.ssl/key-store "./letsencrypt/live/authfed.net/privkey.pem"
-                            "./letsencrypt/live/authfed.net/fullchain.pem"))
+  (less.awful.ssl/key-store (::config/private config/params)
+                            (::config/public config/params)))
 
 ; (.setKeyEntry keystore-instance "cert2" (less.awful.ssl/private-key "./letsencrypt/live/authfed.com/privkey.pem") less.awful.ssl/key-store-password (less.awful.ssl/load-certificate-chain "./letsencrypt/live/authfed.com/fullchain.pem"))
 ; (.reload ssl-context-factory (reify java.util.function.Consumer (accept [this _] _)))
