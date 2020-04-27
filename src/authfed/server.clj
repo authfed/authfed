@@ -15,7 +15,7 @@
             [clojure.java.io :as io]
             [clojure.pprint :refer [pprint]]
             [ring.middleware.resource :as resource]
-            [ring.middleware.session.cookie :as cookie]
+            [ring.middleware.session.memory :as memory]
             [ring.util.codec :as codec]
             [ring.util.response :as ring-resp]))
 
@@ -62,18 +62,16 @@
 
 (defn home-page
  [request]
- (let [sid (get-in request [:session ::id] (str (java.util.UUID/randomUUID)))]
-  (-> (ring-resp/response [{:tag "p" :content "Hello World!"}
-                           {:tag "br"}
-                           {:tag "pre" :content (with-out-str (pprint (:session request)))}])
-   (update :body template/html)
-   (update :body xml/emit-str)
-   (assoc-in [:session ::id] sid))))
+ (-> (ring-resp/response [{:tag "p" :content "Hello World!"}
+                          {:tag "br"}
+                          {:tag "pre" :content (with-out-str (pprint (:cookies request)))}])
+  (update :body template/html)
+  (update :body xml/emit-str)))
 
 (def common-interceptors
  [(body-params/body-params)
-  (middlewares/session {:store (cookie/cookie-store)})
-  (csrf/anti-forgery {:cookie-token true})
+  (middlewares/session {:store (memory/memory-store)})
+  (csrf/anti-forgery)
   http/html-body])
 
 (def routes #{["/" :get (conj common-interceptors `home-page)]
