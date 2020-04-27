@@ -77,7 +77,7 @@
                              :ssl-port 8443
                              :ssl? true}})
 
-(def runnable
+(defonce runnable
   (-> service
     (assoc ::http/routes #(route/expand-routes (deref #'routes)))
     (assoc ::http/join? false)
