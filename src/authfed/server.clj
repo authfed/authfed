@@ -11,6 +11,7 @@
             [authfed.saml :as saml]
             [authfed.config :as config]
             [authfed.template :as template]
+            [buddy.hashers :as hashers]
             [clojure.data.xml :as xml]
             [clojure.java.io :as io]
             [clojure.pprint :refer [pprint]]
@@ -24,6 +25,8 @@
   (ring-resp/response (format "Clojure %s - served from %s"
                               (clojure-version)
                               (route/url-for ::about-page))))
+
+(defonce state (atom {}))
 
 (defn login-page
   [request]
@@ -46,19 +49,24 @@
                                         :attrs {:type "submit" :name "submit" :value "login"}}]}])
     (update :body template/html)
     (update :body xml/emit-str))
-   (-> (ring-resp/response [{:tag "form"
-                             :attrs {:method "POST" :action "https://signin.aws.amazon.com/saml"}
-                             :content [{:tag "input"
-                                        :attrs {:type "hidden"
-                                                :name "SAMLResponse"
-                                                :value (-> (saml/saml-response)
-                                                          saml/sign-and-serialize
-                                                          .getBytes
-                                                          codec/base64-encode)}}
-                                       {:tag "input"
-                                        :attrs {:type "submit" :value "Go to AWS"}}]}])
-    (update :body template/html)
-    (update :body xml/emit-str))))
+   (do
+    (when-let [ring-session (-> request :cookies (get "ring-session") :value)]
+     (swap! state update ring-session conj
+      (-> request :form-params (select-keys [:email :password]) (update :password hashers/derive))))
+;    (hashers/check "hello" (:password (first (get @state ring-session))))
+    (-> (ring-resp/response [{:tag "form"
+                              :attrs {:method "POST" :action "https://signin.aws.amazon.com/saml"}
+                              :content [{:tag "input"
+                                         :attrs {:type "hidden"
+                                                 :name "SAMLResponse"
+                                                 :value (-> (saml/saml-response)
+                                                           saml/sign-and-serialize
+                                                           .getBytes
+                                                           codec/base64-encode)}}
+                                        {:tag "input"
+                                         :attrs {:type "submit" :value "Go to AWS"}}]}])
+     (update :body template/html)
+     (update :body xml/emit-str)))))
 
 (defn home-page
  [request]
