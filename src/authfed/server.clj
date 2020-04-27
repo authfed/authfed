@@ -12,6 +12,7 @@
             [authfed.template :as template]
             [clojure.data.xml :as xml]
             [clojure.java.io :as io]
+            [clojure.pprint :refer [pprint]]
             [ring.middleware.resource :as resource]
             [ring.middleware.session.cookie :as cookie]
             [ring.util.codec :as codec]
