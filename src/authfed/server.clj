@@ -3,6 +3,7 @@
   (:import [org.eclipse.jetty.util.ssl SslContextFactory]
            [org.eclipse.jetty.http2 HTTP2Cipher])
   (:require [io.pedestal.http :as http]
+            [io.pedestal.http.csrf :as csrf]
             [io.pedestal.http.route :as route]
             [less.awful.ssl]
             [io.pedestal.http.body-params :as body-params]
@@ -26,8 +27,38 @@
 
 (defn login-page
   [request]
-  (let [samlresponse (saml/sign-and-serialize (saml/saml-response))]
-    (ring-resp/response (str "<form method=\"POST\" action=\"https://signin.aws.amazon.com/saml\"><input type=\"hidden\" name=\"SAMLResponse\" value=" (codec/base64-encode (.getBytes samlresponse)) " /><input type=\"submit\" value=\"Submit\" /></form>"))))
+  (if (not= :post (:request-method request))
+   (-> (ring-resp/response [{:tag "form"
+                             :attrs {:method "POST" :action "/login"}
+                             :content [{:tag "input"
+                                        :attrs {:type "hidden" :name "__anti-forgery-token" :value (csrf/anti-forgery-token request)}}
+                                       {:tag "label"
+                                        :attrs {:for "email"}
+                                        :content "email"}
+                                       {:tag "input"
+                                        :attrs {:type "text" :name "email"}}
+                                       {:tag "label"
+                                        :attrs {:for "password"}
+                                        :content "password"}
+                                       {:tag "input"
+                                        :attrs {:type "password" :name "password"}}
+                                       {:tag "input"
+                                        :attrs {:type "submit" :name "submit" :value "login"}}]}])
+    (update :body template/html)
+    (update :body xml/emit-str))
+   (-> (ring-resp/response [{:tag "form"
+                             :attrs {:method "POST" :action "https://signin.aws.amazon.com/saml"}
+                             :content [{:tag "input"
+                                        :attrs {:type "hidden"
+                                                :name "SAMLResponse"
+                                                :value (-> (saml/saml-response)
+                                                          saml/sign-and-serialize
+                                                          .getBytes
+                                                          codec/base64-encode)}}
+                                       {:tag "input"
+                                        :attrs {:type "submit" :value "Go to AWS"}}]}])
+    (update :body template/html)
+    (update :body xml/emit-str))))
 
 (defn home-page
  [request]
@@ -41,12 +72,13 @@
 
 (def common-interceptors
  [(body-params/body-params)
-  http/html-body
-  (middlewares/session {:store (cookie/cookie-store)})])
+  (middlewares/session {:store (cookie/cookie-store)})
+  (csrf/anti-forgery {:cookie-token true})
+  http/html-body])
 
 (def routes #{["/" :get (conj common-interceptors `home-page)]
               ["/favicon.ico" :get (conj common-interceptors (middlewares/file-info) (middlewares/file "static"))]
-              ["/login" :get (conj common-interceptors `login-page)]
+              ["/login" :any (conj common-interceptors `login-page)]
               ["/about" :get (conj common-interceptors `about-page)]})
 
 (def keystore-password (apply str less.awful.ssl/key-store-password))
