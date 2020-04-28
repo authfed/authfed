@@ -26,6 +26,11 @@
                               (clojure-version)
                               (route/url-for ::about-page))))
 
+(defn logout-page
+ [request]
+ (-> (ring-resp/redirect "/")
+  (update :session dissoc :email)))
+
 (defn login-page
   [request]
   (let [hashes (into {} (map (juxt :email :password) config/users))
@@ -88,6 +93,7 @@
 (def routes #{["/" :get (conj common-interceptors `home-page)]
               ["/favicon.ico" :get (conj common-interceptors (middlewares/file-info) (middlewares/file "static"))]
               ["/login" :any (conj common-interceptors `login-page)]
+              ["/logout" :any (conj common-interceptors `logout-page)]
               ["/aws" :get (conj common-interceptors `aws-page)]
               ["/about" :get (conj common-interceptors `about-page)]})
 

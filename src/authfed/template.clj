@@ -20,6 +20,7 @@
 		            :content [{:tag "span" :attrs {:style "margin: 10px;"} :content [{:tag :a :attrs {:href "/"} :content "home"}]}
                         {:tag "span" :attrs {:style "margin: 10px;"} :content [{:tag :a :attrs {:href "/login"} :content "login"}]}
                         {:tag "span" :attrs {:style "margin: 10px;"} :content [{:tag :a :attrs {:href "/aws"} :content "aws"}]}
+                        {:tag "span" :attrs {:style "margin: 10px;"} :content [{:tag :a :attrs {:href "/logout"} :content "logout"}]}
                         {:tag "div"
                          :attrs {:class "container"
                                  :style "margin-top: 40px;"}
