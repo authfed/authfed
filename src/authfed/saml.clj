@@ -26,11 +26,12 @@
 (def sp-endpoint "https://signin.aws.amazon.com/saml") ;; SP Attribute Consume Service Endpoint
 (def target-url "https://signin.aws.amazon.com/saml") ;; Target URL, Destination of the Response
 
-(defn saml-response []
+(defn saml-response [& args]
  (let [request-id (str "request-" (java.util.UUID/randomUUID))
        response-id (str "response-" (java.util.UUID/randomUUID))
        assertion-id (str "assertion-" (java.util.UUID/randomUUID))
        session-id (str "session-" (java.util.UUID/randomUUID))
+       email (first args)
        inst (java.time.Instant/now)
        now (str inst)
        recent (str (.minusSeconds inst (* 30)))
@@ -110,13 +111,13 @@
          :content
          [{:tag ::saml/AttributeValue
            :attrs #::xsi{:type "xs:string"}
-           :content ["test@example.com"]}]}
+           :content [email]}]}
         {:tag ::saml/Attribute
          :attrs {:Name "https://aws.amazon.com/SAML/Attributes/RoleSessionName"}
          :content
          [{:tag ::saml/AttributeValue
            :attrs #::xsi{:type "xs:string"}
-           :content ["test@example.com"]}]}
+           :content [email]}]}
         {:tag ::saml/Attribute
          :attrs {:Name "https://aws.amazon.com/SAML/Attributes/Role"}
          :content

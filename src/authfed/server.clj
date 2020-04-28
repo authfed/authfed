@@ -26,53 +26,56 @@
                               (clojure-version)
                               (route/url-for ::about-page))))
 
-(defonce state (atom {}))
-
 (defn login-page
   [request]
-  (if (not= :post (:request-method request))
-   (-> (ring-resp/response [{:tag "form"
-                             :attrs {:method "POST" :action "/login"}
-                             :content [{:tag "input"
-                                        :attrs {:type "hidden" :name "__anti-forgery-token" :value (csrf/anti-forgery-token request)}}
-                                       {:tag "label"
-                                        :attrs {:for "email"}
-                                        :content "email"}
-                                       {:tag "input"
-                                        :attrs {:type "text" :name "email"}}
-                                       {:tag "label"
-                                        :attrs {:for "password"}
-                                        :content "password"}
-                                       {:tag "input"
-                                        :attrs {:type "password" :name "password"}}
-                                       {:tag "input"
-                                        :attrs {:type "submit" :name "submit" :value "login"}}]}])
-    (update :body template/html)
-    (update :body xml/emit-str))
-   (do
-    (when-let [ring-session (-> request :cookies (get "ring-session") :value)]
-     (swap! state update ring-session conj
-      (-> request :form-params (select-keys [:email :password]) (update :password hashers/derive))))
-;    (hashers/check "hello" (:password (first (get @state ring-session))))
+  (let [hashes (into {} (map (juxt :email :password) config/users))
+        email (-> request :form-params :email)
+        password (hashers/check (-> request :form-params :password) (hashes email))]
+   (if (and email password (= :post (:request-method request)))
+    (-> (ring-resp/redirect "/aws")
+        (update :session merge {:email email}))
     (-> (ring-resp/response [{:tag "form"
-                              :attrs {:method "POST" :action "https://signin.aws.amazon.com/saml"}
+                              :attrs {:method "POST" :action "/login"}
                               :content [{:tag "input"
-                                         :attrs {:type "hidden"
-                                                 :name "SAMLResponse"
-                                                 :value (-> (saml/saml-response)
-                                                           saml/sign-and-serialize
-                                                           .getBytes
-                                                           codec/base64-encode)}}
+                                         :attrs {:type "hidden" :name "__anti-forgery-token" :value (csrf/anti-forgery-token request)}}
+                                        {:tag "label"
+                                         :attrs {:for "email"}
+                                         :content "email"}
                                         {:tag "input"
-                                         :attrs {:type "submit" :value "Go to AWS"}}]}])
+                                         :attrs {:type "text" :name "email"}}
+                                        {:tag "label"
+                                         :attrs {:for "password"}
+                                         :content "password"}
+                                        {:tag "input"
+                                         :attrs {:type "password" :name "password"}}
+                                        {:tag "input"
+                                         :attrs {:type "submit" :name "submit" :value "login"}}]}])
      (update :body template/html)
      (update :body xml/emit-str)))))
+
+(defn aws-page
+  [request]
+  (if-let [email (-> request :session :email)]
+   (-> (ring-resp/response [{:tag "form"
+                             :attrs {:method "POST" :action "https://signin.aws.amazon.com/saml"}
+                             :content [{:tag "input"
+                                        :attrs {:type "hidden"
+                                                :name "SAMLResponse"
+                                                :value (-> (saml/saml-response email)
+                                                          saml/sign-and-serialize
+                                                          .getBytes
+                                                          codec/base64-encode)}}
+                                       {:tag "input"
+                                        :attrs {:type "submit" :value "Go to AWS"}}]}])
+    (update :body template/html)
+    (update :body xml/emit-str))
+   (ring-resp/redirect "/login")))
 
 (defn home-page
  [request]
  (-> (ring-resp/response [{:tag "p" :content "Hello World!"}
                           {:tag "br"}
-                          {:tag "pre" :content (with-out-str (pprint (:cookies request)))}])
+                          {:tag "pre" :content (with-out-str (pprint (:session request)))}])
   (update :body template/html)
   (update :body xml/emit-str)))
 
@@ -85,6 +88,7 @@
 (def routes #{["/" :get (conj common-interceptors `home-page)]
               ["/favicon.ico" :get (conj common-interceptors (middlewares/file-info) (middlewares/file "static"))]
               ["/login" :any (conj common-interceptors `login-page)]
+              ["/aws" :get (conj common-interceptors `aws-page)]
               ["/about" :get (conj common-interceptors `about-page)]})
 
 (def keystore-password (apply str less.awful.ssl/key-store-password))

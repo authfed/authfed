@@ -17,7 +17,10 @@
 		 :content [{:tag "head"
 		            :content [title stylesheet]}
 		           {:tag "body"
-		            :content [{:tag "div"
+		            :content [{:tag "span" :attrs {:style "margin: 10px;"} :content [{:tag :a :attrs {:href "/"} :content "home"}]}
+                        {:tag "span" :attrs {:style "margin: 10px;"} :content [{:tag :a :attrs {:href "/login"} :content "login"}]}
+                        {:tag "span" :attrs {:style "margin: 10px;"} :content [{:tag :a :attrs {:href "/aws"} :content "aws"}]}
+                        {:tag "div"
                          :attrs {:class "container"
                                  :style "margin-top: 40px;"}
                          :content body}]}]}))
