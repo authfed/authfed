@@ -41,21 +41,20 @@
         (update :session merge {:email email}))
     (-> (ring-resp/response [{:tag "form"
                               :attrs {:method "POST" :action "/login"}
-                              :content [{:tag "input"
-                                         :attrs {:type "hidden" :name "__anti-forgery-token" :value (csrf/anti-forgery-token request)}}
-                                        {:tag "label"
-                                         :attrs {:for "email"}
-                                         :content "email"}
-                                        {:tag "input"
-                                         :attrs {:type "text" :name "email"}}
-                                        {:tag "label"
-                                         :attrs {:for "password"}
-                                         :content "password"}
-                                        {:tag "input"
-                                         :attrs {:type "password" :name "password"}}
-                                        {:tag "input"
-                                         :attrs {:type "submit" :name "submit" :value "login"}}]}])
-     (update :body template/html)
+                              :content [(template/input {:id "__anti-forgery-token"
+                                                         :type "hidden"
+                                                         :value (csrf/anti-forgery-token request)})
+                                        (template/input {:id "email"
+                                                         :type "text"
+                                                         :label "Email"})
+                                        (template/input {:id "password"
+                                                         :type "password"
+                                                         :label "Password"})
+                                        (template/input {:id "submit"
+                                                         :type "submit"
+                                                         :class ["btn" "btn-primary"]
+                                                         :value "Sign in"})]}])
+     (update :body (partial template/html request))
      (update :body xml/emit-str)))))
 
 (defn aws-page
@@ -63,16 +62,17 @@
   (if-let [email (-> request :session :email)]
    (-> (ring-resp/response [{:tag "form"
                              :attrs {:method "POST" :action "https://signin.aws.amazon.com/saml"}
-                             :content [{:tag "input"
-                                        :attrs {:type "hidden"
-                                                :name "SAMLResponse"
-                                                :value (-> (saml/saml-response email)
-                                                          saml/sign-and-serialize
-                                                          .getBytes
-                                                          codec/base64-encode)}}
-                                       {:tag "input"
-                                        :attrs {:type "submit" :value "Go to AWS"}}]}])
-    (update :body template/html)
+                             :content [(template/input {:id "SAMLResponse"
+                                                        :type "hidden"
+                                                        :value (-> (saml/saml-response email)
+                                                                  saml/sign-and-serialize
+                                                                  .getBytes
+                                                                  codec/base64-encode)})
+                                       (template/input {:id "submit"
+                                                        :type "submit"
+                                                        :class ["btn" "btn-primary"]
+                                                        :value "Sign in to AWS"})]}])
+    (update :body (partial template/html request))
     (update :body xml/emit-str))
    (ring-resp/redirect "/login")))
 
@@ -80,8 +80,8 @@
  [request]
  (-> (ring-resp/response [{:tag "p" :content "Hello World!"}
                           {:tag "br"}
-                          {:tag "pre" :content (with-out-str (pprint (:session request)))}])
-  (update :body template/html)
+                          {:tag "pre" :content (with-out-str (pprint (:uri request)))}])
+  (update :body (partial template/html request))
   (update :body xml/emit-str)))
 
 (def common-interceptors
