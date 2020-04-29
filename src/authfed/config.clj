@@ -22,8 +22,8 @@
    (catch Exception e "1234"))))
 
 (def params
- {::private (or-dummy "/etc/letsencrypt/live/authfed.net/privkey.pem" "dummy-private.pem")
-  ::public (or-dummy "/etc/letsencrypt/live/authfed.net/fullchain.pem" "dummy-public.pem")
+ {::private (or-dummy "/etc/authfed/authfed.net-privkey.pem" "dummy-private.pem")
+  ::public (or-dummy "/etc/authfed/authfed.net-fullchain.pem" "dummy-public.pem")
   ::static (let [directory (new File "/etc/authfed/static")]
             (try (.getPath (doto directory .listFiles))
              (catch FileNotFoundException e "static")))
