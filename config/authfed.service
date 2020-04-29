@@ -12,6 +12,7 @@ ExecStop=/bin/kill -s TERM $MAINPID
 SuccessExitStatus=143
 User=authfed
 Group=authfed
+#AmbientCapabilities=CAP_NET_BIND_SERVICE
 
 [Install]
 WantedBy=multi-user.target
