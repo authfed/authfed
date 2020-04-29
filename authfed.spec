@@ -33,6 +33,7 @@ install -d %{buildroot}%{_sysconfdir}/%{name}
 install -d %{buildroot}%{_sysconfdir}/sysconfig
 install -d %{buildroot}%{_unitdir}
 install -p -m 0644 %{jar} %{buildroot}%{_optdir}/%{name}/%{jar}
+install -p -m 0744 copy-pem-files.sh %{buildroot}%{_optdir}/%{name}/copy-pem-files.sh
 install -p -m 0644 logback.xml %{buildroot}%{_sysconfdir}/%{name}/logback.xml
 install -p -m 0644 sysconfig %{buildroot}%{_sysconfdir}/sysconfig/%{name}
 install -p -m 0644 %{name}.service %{buildroot}%{_unitdir}/%{name}.service
@@ -45,6 +46,7 @@ rm -rf %{buildroot}
 %dir %attr(0755, %{name}, %{name}) %{_var}/log/%{name}
 %dir %attr(0755, %{name}, %{name}) %{_sysconfdir}/%{name}
 %attr(0644, %{name}, %{name}) %{_optdir}/%{name}/%{jar}
+%attr(0744, root, root) %{_optdir}/%{name}/copy-pem-files.sh
 %attr(0644, %{name}, %{name}) %{_sysconfdir}/%{name}/logback.xml
 %attr(0644, root, root) %{_sysconfdir}/sysconfig/%{name}
 %attr(0644, root, root) %{_unitdir}/%{name}.service
