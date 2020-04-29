@@ -9,6 +9,10 @@
   (try (.getPath (doto f slurp))
    (catch FileNotFoundException e dev))))
 
+(def users
+ (with-open [fr (new PushbackReader (new FileReader (or-dummy "/etc/authfed/users.edn" "users.edn")))]
+  (edn/read fr)))
+
 (def account-id
  (let [endpoint "http://169.254.169.254/latest/meta-data/iam/info"]
   (try (-> (slurp endpoint)
@@ -20,7 +24,6 @@
 (def params
  {::private (or-dummy "/etc/letsencrypt/live/authfed.net/privkey.pem" "dummy-private.pem")
   ::public (or-dummy "/etc/letsencrypt/live/authfed.net/fullchain.pem" "dummy-public.pem")
-  ::users (or-dummy "/etc/authfed/users.edn" "users.edn")
   ::static (let [directory (new File "/etc/authfed/static")]
             (try (.getPath (doto directory .listFiles))
              (catch FileNotFoundException e "static")))
