@@ -150,8 +150,8 @@
 
 (def kp
   (less.awful.ssl/key-pair
-    (less.awful.ssl/public-key "dummy-public.pem")
-    (less.awful.ssl/private-key "dummy-private.pem")))
+    (less.awful.ssl/public-key (::config/saml-public-key config/params))
+    (less.awful.ssl/private-key (::config/saml-private-key config/params))))
 
 (def kif (.getKeyInfoFactory fac))
 (def kv (.newKeyValue kif (.getPublic kp)))
