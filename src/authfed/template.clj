@@ -37,11 +37,11 @@
 )
 
 
-; (def font-stylesheet
-;  {:tag "link"
-;   :attrs {:rel "stylesheet"
-; 		        :href "https://fonts.googleapis.com/css?family=Poppins%3A400%2C700%7CLato%3A400%2C700%2C400italic%2C700italic%7CInconsolata%3A400%2C700&amp;subset=latin%2Clatin-ext"
-; 		        :crossorigin "anonymous"}})
+(def font-stylesheet
+ {:tag "link"
+  :attrs {:rel "stylesheet"
+		        :href "https://fonts.googleapis.com/css?family=Poppins%3A400%2C700%7CLato%3A400%2C700%2C400italic%2C700italic%7CInconsolata%3A400%2C700&amp;subset=latin%2Clatin-ext"
+		        :crossorigin "anonymous"}})
 
 (defn nav [request]
  (let [uri (:uri request)
@@ -71,7 +71,7 @@
  ([request body]
 		{:tag "html"
 		 :content [{:tag "head"
-		            :content [title meta-charset meta-width stylesheet]}
+		            :content [title meta-charset meta-width stylesheet font-stylesheet]}
 		           {:tag "body"
 		            :content [(nav request)
                         {:tag "div"
