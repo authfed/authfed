@@ -11,11 +11,7 @@
  {:tag "meta" :attrs {:content "width=device-width, initial-scale=1" :name "viewport"}})
 
 (def stylesheet
- {:tag "link"
-  :attrs {:rel "stylesheet"
-		        :href "https://maxcdn.bootstrapcdn.com/bootstrap/4.0.0/css/bootstrap.min.css"
-		        :integrity "sha384-Gn5384xqQ1aoWXA+058RXPxPg6fy4IWvTNh0E263XmFcJlSAwiGgFAW/dAiS6JXm"
-		        :crossorigin "anonymous"}})
+ {:tag "link" :attrs {:rel "stylesheet" :href "/css/bootstrap.min.css"}})
 
 (defn scripts []
  ; {:tag "div"
