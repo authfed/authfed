@@ -11,7 +11,7 @@
            [javax.xml.parsers DocumentBuilderFactory]
            [javax.xml.transform TransformerFactory]
            [javax.xml.transform.dom DOMSource]
-           [javax.xml.transform.stream StreamResult]
+           [javax.xml.transform.stream StreamResult StreamSource]
            [javax.xml.validation Schema SchemaFactory Validator]
            [org.w3c.dom Document]))
 
@@ -139,7 +139,7 @@
 
 (defonce schema
  (let [schemaFactory (SchemaFactory/newInstance XMLConstants/W3C_XML_SCHEMA_NS_URI)]
-  (.newSchema schemaFactory (new java.net.URL "http://docs.oasis-open.org/security/saml/v2.0/saml-schema-protocol-2.0.xsd"))))
+  (.newSchema schemaFactory (new StreamSource (ClassLoader/getSystemResourceAsStream "saml-schema-protocol-2.0.xsd")))))
 
 (def dbf
  (doto (DocumentBuilderFactory/newInstance)
