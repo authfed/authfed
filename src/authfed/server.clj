@@ -91,7 +91,6 @@
   http/html-body])
 
 (def routes #{["/" :get (conj common-interceptors `home-page)]
-              ["/favicon.ico" :get (conj common-interceptors (middlewares/file-info) (middlewares/file "static"))]
               ["/login" :any (conj common-interceptors `login-page)]
               ["/logout" :any (conj common-interceptors `logout-page)]
               ["/aws" :get (conj common-interceptors `aws-page)]
