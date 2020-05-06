@@ -1,6 +1,7 @@
 (ns authfed.saml
   (:require [less.awful.ssl]
             [authfed.config :as config]
+            [clojure.java.io :as io]
             [clojure.data.xml :refer :all])
   (:import [javax.xml.crypto.dsig DigestMethod Transform XMLSignatureFactory CanonicalizationMethod]
            [javax.xml.crypto.dsig.dom DOMSignContext]
@@ -11,7 +12,7 @@
            [javax.xml.parsers DocumentBuilderFactory]
            [javax.xml.transform TransformerFactory]
            [javax.xml.transform.dom DOMSource]
-           [javax.xml.transform.stream StreamResult StreamSource]
+           [javax.xml.transform.stream StreamResult]
            [javax.xml.validation Schema SchemaFactory Validator]
            [org.w3c.dom Document]))
 
@@ -139,7 +140,7 @@
 
 (defonce schema
  (let [schemaFactory (SchemaFactory/newInstance XMLConstants/W3C_XML_SCHEMA_NS_URI)]
-  (.newSchema schemaFactory (new StreamSource (ClassLoader/getSystemResourceAsStream "saml-schema-protocol-2.0.xsd")))))
+  (.newSchema schemaFactory (io/resource "xsd/saml-schema-protocol-2.0.xsd"))))
 
 (def dbf
  (doto (DocumentBuilderFactory/newInstance)
