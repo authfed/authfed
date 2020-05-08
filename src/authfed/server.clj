@@ -127,15 +127,14 @@
 ;  (.reload (reify java.util.function.Consumer (accept [this _] _))))
 
 (def ssl-context-factory
-  (let [^SslContextFactory context (SslContextFactory.)]
-    (.setKeyStore context keystore-instance)
-    (.setKeyStorePassword context keystore-password)
-    (.setCipherComparator context HTTP2Cipher/COMPARATOR)
-    (.setUseCipherSuitesOrder context true)
-    (.setWantClientAuth context true)                 ;; want (don't need) client authentication
-    (.setTrustStore context trust-store)              ;; if you provide a cert it must be signed
-    (.setEndpointIdentificationAlgorithm context nil) ;; but don't care to check hostname or ip
-    context))
+  (doto (new SslContextFactory)
+   (.setKeyStore keystore-instance)
+   (.setKeyStorePassword keystore-password)
+   (.setCipherComparator HTTP2Cipher/COMPARATOR)
+   (.setUseCipherSuitesOrder true)
+   (.setWantClientAuth true)                   ;; want (don't need) client authentication
+   (.setTrustStore trust-store)                ;; if you provide a cert it must be signed
+   (.setEndpointIdentificationAlgorithm nil))) ;; but don't care to check hostname or ip
 
 (def service
   {:env :prod
