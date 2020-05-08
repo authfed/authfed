@@ -100,6 +100,8 @@
 (def keystore-instance
   (less.awful.ssl/key-store (::config/private config/params)
                             (::config/public config/params)))
+(def trust-store
+  (less.awful.ssl/trust-store (::config/cacert config/params)))
 
 ;; add another cert+key to the key store
 ; (-> runnable
@@ -122,6 +124,9 @@
     (.setKeyStorePassword context keystore-password)
     (.setCipherComparator context HTTP2Cipher/COMPARATOR)
     (.setUseCipherSuitesOrder context true)
+    (.setWantClientAuth context true)                 ;; want (don't need) client authentication
+    (.setTrustStore context trust-store)              ;; if you provide a cert it must be signed
+    (.setEndpointIdentificationAlgorithm context nil) ;; but don't care to check hostname or ip
     context))
 
 (def service

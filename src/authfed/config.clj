@@ -24,6 +24,7 @@
 (def params
  {::private (or-dummy "/etc/authfed/authfed.net-privkey.pem" "dummy-private.pem")
   ::public (or-dummy "/etc/authfed/authfed.net-fullchain.pem" "dummy-public.pem")
+  ::cacert (or-dummy "/etc/pki/CA/cacert.pem" "cacert.pem")
   ::static (let [directory (new File "/etc/authfed/static")]
             (try (.getPath (doto directory .listFiles))
              (catch FileNotFoundException e "static")))
