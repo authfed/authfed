@@ -90,7 +90,15 @@
   (csrf/anti-forgery)
   http/html-body])
 
+(defn debug-page
+ [request]
+ (do (def asdf request)
+  {:status 200
+   :headers {"Content-Type" "text/plain"}
+   :body (str (with-out-str (pprint request)) \newline)}))
+
 (def routes #{["/" :get (conj common-interceptors `home-page)]
+              ["/debug" :any (conj common-interceptors `debug-page)]
               ["/login" :any (conj common-interceptors `login-page)]
               ["/logout" :any (conj common-interceptors `logout-page)]
               ["/aws" :get (conj common-interceptors `aws-page)]
