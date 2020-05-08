@@ -101,8 +101,20 @@
   (less.awful.ssl/key-store (::config/private config/params)
                             (::config/public config/params)))
 
-; (.setKeyEntry keystore-instance "cert2" (less.awful.ssl/private-key "./letsencrypt/live/authfed.com/privkey.pem") less.awful.ssl/key-store-password (less.awful.ssl/load-certificate-chain "./letsencrypt/live/authfed.com/fullchain.pem"))
-; (.reload ssl-context-factory (reify java.util.function.Consumer (accept [this _] _)))
+;; add another cert+key to the key store
+; (-> runnable
+;  ::http/container-options
+;  :ssl-context-factory
+;  .getKeyStore
+;  (.setKeyEntry "cert2"
+;                (less.awful.ssl/private-key "dummy-private2.pem")
+;                less.awful.ssl/key-store-password
+;                (less.awful.ssl/load-certificate-chain "dummy-public2.pem")))
+;; reload the ssl context factory
+; (-> runnable
+;  ::http/container-options
+;  :ssl-context-factory
+;  (.reload (reify java.util.function.Consumer (accept [this _] _))))
 
 (def ssl-context-factory
   (let [^SslContextFactory context (SslContextFactory.)]
