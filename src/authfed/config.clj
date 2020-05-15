@@ -25,9 +25,9 @@
  {::private (or-dummy "/etc/authfed/authfed.net-privkey.pem" "dummy-private.pem")
   ::public (or-dummy "/etc/authfed/authfed.net-fullchain.pem" "dummy-public.pem")
   ::cacert (or-dummy "/etc/pki/CA/cacert.pem" "cacert.pem")
-  ::static (let [directory (new File "/etc/authfed/static")]
-            (try (.getPath (doto directory .listFiles))
-             (catch FileNotFoundException e "static")))
+  ; ::static (let [directory (new File "/etc/authfed/static")]
+  ;           (try (.getPath (doto directory .listFiles))
+  ;            (catch FileNotFoundException e "static")))
   ::saml-private-key (or-dummy "/etc/authfed/aws-private.pem" "dummy-private.pem")
   ::saml-public-key (or-dummy "/etc/authfed/aws-public.pem" "dummy-public.pem")
   ::saml-role-mapping (str "arn:aws:iam::" account-id ":role/test20200424,arn:aws:iam::" account-id ":saml-provider/authfed-net")})
