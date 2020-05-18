@@ -97,7 +97,16 @@
    :headers {"Content-Type" "text/plain"}
    :body (str (with-out-str (pprint request)) \newline)}))
 
+(defn remove-prefix [s]
+ {:name (keyword (gensym "remove-prefix-"))
+  :enter (fn [ctx] (update-in ctx [:request :path-info] #(.substring % (count s))))})
+
 (def routes #{["/" :get (conj common-interceptors `home-page)]
+              ["/vault/*" :get (conj common-interceptors
+                                   #(assert (:ssl-client-cert %))
+                                   (remove-prefix "/vault")
+                                   (middlewares/file-info)
+                                   (middlewares/file (::config/vault config/params)))]
               ["/debug" :any (conj common-interceptors `debug-page)]
               ["/login" :any (conj common-interceptors `login-page)]
               ["/logout" :any (conj common-interceptors `logout-page)]
