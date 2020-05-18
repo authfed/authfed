@@ -1,5 +1,5 @@
 PACKAGE = authfed
-JAR = dist/$(PACKAGE).jar
+JAR = $(PACKAGE).jar
 
 EXTRA_DIST = Makefile config/*
 

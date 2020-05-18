@@ -11,5 +11,5 @@
         org.slf4j/log4j-over-slf4j {:mvn/version "1.7.26"}}
  :paths ["src" "resources"]
  :aliases {:uberjar {:extra-deps {seancorfield/depstar {:mvn/version "0.5.2"}}
-                     :main-opts ["-m" "hf.depstar.uberjar" "dist/authfed.jar"]}
+                     :main-opts ["-m" "hf.depstar.uberjar" "authfed.jar"]}
            :dev {:jvm-opts ["-Dlogback.configurationFile=logback-dev.xml"]}}}

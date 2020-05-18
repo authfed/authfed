@@ -37,6 +37,7 @@ repl-port
 out/
 build/
 dist/
+authfed.jar
 
 # Terraform
 terraform.tfstate*
