@@ -13,6 +13,10 @@
  (with-open [fr (new PushbackReader (new FileReader (or-dummy "/etc/authfed/users.edn" "users.edn")))]
   (edn/read fr)))
 
+(def targets
+ (with-open [fr (new PushbackReader (new FileReader (or-dummy "/etc/authfed/targets.edn" "targets.edn")))]
+  (edn/read fr)))
+
 (def account-id
  (let [endpoint "http://169.254.169.254/latest/meta-data/iam/info"]
   (try (-> (slurp endpoint)
@@ -21,13 +25,28 @@
            (.substring 13 25))
    (catch Exception e "1234"))))
 
+(def mac? (-> (System/getProperty "os.name") .toLowerCase (.startsWith "mac")))
+
 (def params
- {::private (or-dummy "/etc/authfed/authfed.net-privkey.pem" "dummy-private.pem")
-  ::public (or-dummy "/etc/authfed/authfed.net-fullchain.pem" "dummy-public.pem")
+ {::letsencrypt (if mac?
+                 ["dummy"]
+                 (->> (new java.io.File "/etc/authfed")
+                  .listFiles
+                  (map #(.getName %))
+                  (filter #(or (.endsWith % "-fullchain.pem")
+                               (.endsWith % "-privkey.pem")))
+                  sort
+                  (apply hash-map)
+                  keys
+                  (map #(.replace % "-fullchain.pem" ""))
+                  (map #(str "/etc/authfed/" %))
+                  (into [])))
   ::cacert (or-dummy "/etc/authfed/cacert.pem" "cacert.pem")
   ::vault (let [directory (new File "/etc/authfed")]
            (try (.getPath (doto directory .listFiles))
             (catch FileNotFoundException e "static/api")))
+  ::http-port (if mac? 8080 80)
+  ::ssl-port (if mac? 8443 443)
   ::saml-private-key (or-dummy "/etc/authfed/aws-private.pem" "dummy-private.pem")
   ::saml-public-key (or-dummy "/etc/authfed/aws-public.pem" "dummy-public.pem")
   ::saml-role-mapping (str "arn:aws:iam::" account-id ":role/test20200424,arn:aws:iam::" account-id ":saml-provider/authfed-net")})

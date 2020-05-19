@@ -97,26 +97,43 @@
    :headers {"Content-Type" "text/plain"}
    :body (str (with-out-str (pprint request)) \newline)}))
 
+(defn apex-redirects
+ [request]
+ (if-let [target (get config/targets (or (:server-name request) (get (:headers request) "host")))]
+  (ring-resp/redirect target)
+  (ring-resp/not-found "not found")))
+
 (defn remove-prefix [s]
  {:name (keyword (gensym "remove-prefix-"))
   :enter (fn [ctx] (update-in ctx [:request :path-info] #(.substring % (count s))))})
 
-(def routes #{["/" :get (conj common-interceptors `home-page)]
-              ["/vault/*" :get (conj common-interceptors
-                                   #(assert (:ssl-client-cert %))
-                                   (remove-prefix "/vault")
-                                   (middlewares/file-info)
-                                   (middlewares/file (::config/vault config/params)))]
-              ["/debug" :any (conj common-interceptors `debug-page)]
-              ["/login" :any (conj common-interceptors `login-page)]
-              ["/logout" :any (conj common-interceptors `logout-page)]
-              ["/aws" :get (conj common-interceptors `aws-page)]
-              ["/about" :get (conj common-interceptors `about-page)]})
+(def routes
+ [[:catch-all ["/" {:get `apex-redirects}]]
+  [:net-authfed :https "authfed.net"
+   ["/" ^:interceptors `common-interceptors {:get `home-page}]
+   ["/vault/*" ^:interceptors `(conj common-interceptors
+                                     #(def asdf %)
+                                     #(assert (:ssl-client-cert %))
+                                     (remove-prefix "/vault")
+                                     (middlewares/file-info))
+               {:get (middlewares/file (::config/vault config/params))}]
+   ["/debug" ^:interceptors `common-interceptors {:any `debug-page}]
+   ["/login" ^:interceptors `common-interceptors {:any `login-page}]
+   ["/logout" ^:interceptors `common-interceptors {:any `logout-page}]
+   ["/aws" ^:interceptors `common-interceptors {:get `aws-page}]
+   ["/about" ^:interceptors `common-interceptors {:get `about-page}]]])
 
 (def keystore-password (apply str less.awful.ssl/key-store-password))
 (def keystore-instance
-  (less.awful.ssl/key-store (::config/private config/params)
-                            (::config/public config/params)))
+ (let [ksi (java.security.KeyStore/getInstance (java.security.KeyStore/getDefaultType))]
+  (.load ksi nil nil)
+  (doall
+   (for [x (::config/letsencrypt config/params)]
+    (.setKeyEntry ksi x (less.awful.ssl/private-key (str x "-privkey.pem"))
+                        less.awful.ssl/key-store-password
+                        (less.awful.ssl/load-certificate-chain (str x "-fullchain.pem")))))
+  ksi))
+
 (def trust-store
   (less.awful.ssl/trust-store (::config/cacert config/params)))
 
@@ -151,11 +168,11 @@
    ::http/resource-path "/public"
    ::http/type :jetty
    ::http/host "0.0.0.0"
-   ::http/port 8080
+   ::http/port (::config/http-port config/params)
    ::http/container-options {:h2c? true
                              :h2? false
                              :ssl-context-factory ssl-context-factory
-                             :ssl-port 8443
+                             :ssl-port (::config/ssl-port config/params)
                              :ssl? true}})
 
 (defonce runnable
