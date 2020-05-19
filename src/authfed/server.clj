@@ -85,6 +85,7 @@
   (update :body xml/emit-str)))
 
 (def common-interceptors
+ ^:interceptors
  [(body-params/body-params)
   (middlewares/session {:store (memory/memory-store)})
   (csrf/anti-forgery)
@@ -110,18 +111,17 @@
 (def routes
  [[:catch-all ["/" {:get `apex-redirects}]]
   [:net-authfed :https "authfed.net"
-   ["/" ^:interceptors `common-interceptors {:get `home-page}]
-   ["/vault/*" ^:interceptors `(conj common-interceptors
-                                     #(def asdf %)
-                                     #(assert (:ssl-client-cert %))
-                                     (remove-prefix "/vault")
-                                     (middlewares/file-info))
+   ["/" common-interceptors {:get `home-page}]
+   ["/vault/*" ^:interceptors (conj common-interceptors
+                                    #(assert (:ssl-client-cert %))
+                                    (remove-prefix "/vault")
+                                    (middlewares/file-info))
                {:get (middlewares/file (::config/vault config/params))}]
-   ["/debug" ^:interceptors `common-interceptors {:any `debug-page}]
-   ["/login" ^:interceptors `common-interceptors {:any `login-page}]
-   ["/logout" ^:interceptors `common-interceptors {:any `logout-page}]
-   ["/aws" ^:interceptors `common-interceptors {:get `aws-page}]
-   ["/about" ^:interceptors `common-interceptors {:get `about-page}]]])
+   ["/debug" common-interceptors {:any `debug-page}]
+   ["/login" common-interceptors {:any `login-page}]
+   ["/logout" common-interceptors {:any `logout-page}]
+   ["/aws" common-interceptors {:get `aws-page}]
+   ["/about" common-interceptors {:get `about-page}]]])
 
 (def keystore-password (apply str less.awful.ssl/key-store-password))
 (def keystore-instance
