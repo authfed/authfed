@@ -135,7 +135,7 @@
 
 (def routes
  [[:catch-all ["/" {:get `apex-redirects}]]
-  [:net-authfed :https "authfed.net"
+  [:net-authfed :https (::config/hostname config/params)
    ["/" common-interceptors {:get `home-page}]
    ["/api/etc/:filename"
     ^:interceptors [#(assert (:ssl-client-cert %))]

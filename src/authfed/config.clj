@@ -28,7 +28,8 @@
 (def mac? (-> (System/getProperty "os.name") .toLowerCase (.startsWith "mac")))
 
 (def params
- {::letsencrypt (if mac?
+ {::hostname (if mac? "localhost" "authfed.net")
+  ::letsencrypt (if mac?
                  ["dummy"]
                  (->> (new java.io.File "/etc/authfed")
                   .listFiles
