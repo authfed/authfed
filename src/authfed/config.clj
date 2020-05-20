@@ -42,9 +42,9 @@
                   (map #(str "/etc/authfed/" %))
                   (into [])))
   ::cacert (or-dummy "/etc/authfed/cacert.pem" "cacert.pem")
-  ::vault (let [directory (new File "/etc/authfed")]
+  ::etcdir (let [directory (new File "/etc/authfed")]
            (try (.getPath (doto directory .listFiles))
-            (catch FileNotFoundException e "static/api")))
+            (catch FileNotFoundException e "etc")))
   ::http-port (if mac? 8080 80)
   ::ssl-port (if mac? 8443 443)
   ::saml-private-key (or-dummy "/etc/authfed/aws-private.pem" "dummy-private.pem")

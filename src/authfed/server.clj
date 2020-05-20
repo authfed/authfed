@@ -1,7 +1,8 @@
 (ns authfed.server
   (:gen-class) ; for -main method in uberjar
   (:import [org.eclipse.jetty.util.ssl SslContextFactory]
-           [org.eclipse.jetty.http2 HTTP2Cipher])
+           [org.eclipse.jetty.http2 HTTP2Cipher]
+           [java.io File FileNotFoundException])
   (:require [io.pedestal.http :as http]
             [io.pedestal.http.csrf :as csrf]
             [io.pedestal.http.route :as route]
@@ -108,15 +109,37 @@
  {:name (keyword (gensym "remove-prefix-"))
   :enter (fn [ctx] (update-in ctx [:request :path-info] #(.substring % (count s))))})
 
+(defn etcdir
+ [request]
+ (let [filename (:filename (:path-params request))
+       etcdir #(str (::config/etcdir config/params) "/" %)]
+  (case (:request-method request)
+   :get
+   (try
+    {:status 200 :body (slurp (etcdir filename))}
+    (catch FileNotFoundException _
+     (ring-resp/not-found "not found\n")))
+   :put
+   (let [tmp (File/createTempFile "upload-" "")]
+    (do
+     (io/copy (:body request) tmp)
+     (io/copy tmp (io/file (etcdir filename)))
+     (io/delete-file tmp)
+     {:status 200 :body "ok\n"}))
+   :delete
+   (if (io/delete-file (etcdir filename))
+    {:status 200 :body "ok\n"}
+    (throw (new Exception "delete failed")))
+   ;; default
+   {:status 405 :body "method not supported\n"})))
+
 (def routes
  [[:catch-all ["/" {:get `apex-redirects}]]
   [:net-authfed :https "authfed.net"
    ["/" common-interceptors {:get `home-page}]
-   ["/vault/*" ^:interceptors (conj common-interceptors
-                                    #(assert (:ssl-client-cert %))
-                                    (remove-prefix "/vault")
-                                    (middlewares/file-info))
-               {:get (middlewares/file (::config/vault config/params))}]
+   ["/api/etc/:filename"
+    ^:interceptors [#(assert (:ssl-client-cert %))]
+    {:any `etcdir}]
    ["/debug" common-interceptors {:any `debug-page}]
    ["/login" common-interceptors {:any `login-page}]
    ["/logout" common-interceptors {:any `logout-page}]
