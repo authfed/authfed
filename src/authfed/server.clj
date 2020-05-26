@@ -2,6 +2,7 @@
   (:gen-class) ; for -main method in uberjar
   (:import [org.eclipse.jetty.util.ssl SslContextFactory]
            [org.eclipse.jetty.http2 HTTP2Cipher]
+           [java.security MessageDigest]
            [java.io File FileNotFoundException])
   (:require [io.pedestal.http :as http]
             [io.pedestal.http.csrf :as csrf]
@@ -109,6 +110,12 @@
  {:name (keyword (gensym "remove-prefix-"))
   :enter (fn [ctx] (update-in ctx [:request :path-info] #(.substring % (count s))))})
 
+;; https://gist.github.com/jizhang/4325757
+(defn md5 [^String s]
+  (let [algorithm (MessageDigest/getInstance "MD5")
+        raw (.digest algorithm (.getBytes s))]
+    (format "%032x" (BigInteger. 1 raw))))
+
 (defn etcdir
  [request]
  (let [filename (:filename (:path-params request))
@@ -116,7 +123,12 @@
   (case (:request-method request)
    :get
    (try
-    {:status 200 :body (slurp (etcdir filename))}
+    (let [body (slurp (etcdir filename))
+          validator (get (:headers request) "if-none-match")
+          etag (str "\"" (md5 body) "\"")]
+     (if (= validator etag)
+      {:status 304 :body nil :headers {"ETag" etag}}
+      {:status 200 :body body :headers {"ETag" etag}}))
     (catch FileNotFoundException _
      (ring-resp/not-found "not found\n")))
    :put
