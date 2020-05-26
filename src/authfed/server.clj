@@ -121,6 +121,16 @@
  (let [filename (:filename (:path-params request))
        etcdir #(str (::config/etcdir config/params) "/" %)]
   (case (:request-method request)
+   :head
+   (try
+    (let [body (slurp (etcdir filename))
+          validator (get (:headers request) "if-none-match")
+          etag (str "\"" (md5 body) "\"")]
+     (if (= validator etag)
+      {:status 304 :body nil :headers {"ETag" etag}}
+      {:status 200 :body nil :headers {"ETag" etag}}))
+    (catch FileNotFoundException _
+     (ring-resp/not-found "not found\n")))
    :get
    (try
     (let [body (slurp (etcdir filename))
