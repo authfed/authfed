@@ -1,4 +1,4 @@
-# AuthFed
+# Authfed
 
 ## Getting started
 
