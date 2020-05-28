@@ -58,24 +58,34 @@
      (update :body (partial template/html request))
      (update :body xml/emit-str)))))
 
+(defn app-page
+ [request]
+ (let [app-id (:app-id (:path-params request))
+       email (-> request :session :email)]
+  (-> (ring-resp/response [{:tag "form"
+                            :attrs {:method "POST" :action "https://signin.aws.amazon.com/saml"}
+                            :content [(template/input {:id "SAMLResponse"
+                                                       :type "hidden"
+                                                       :value (-> (saml/saml-response email)
+                                                                 saml/sign-and-serialize
+                                                                 .getBytes
+                                                                 codec/base64-encode)})
+                                      (template/input {:id "submit"
+                                                       :type "submit"
+                                                       :class ["btn" "btn-primary"]
+                                                       :value "Sign in to AWS"})]}])
+   (update :body (partial template/html request))
+   (update :body xml/emit-str))))
+
 (defn apps-page
-  [request]
-  (if-let [email (-> request :session :email)]
-   (-> (ring-resp/response [{:tag "form"
-                             :attrs {:method "POST" :action "https://signin.aws.amazon.com/saml"}
-                             :content [(template/input {:id "SAMLResponse"
-                                                        :type "hidden"
-                                                        :value (-> (saml/saml-response email)
-                                                                  saml/sign-and-serialize
-                                                                  .getBytes
-                                                                  codec/base64-encode)})
-                                       (template/input {:id "submit"
-                                                        :type "submit"
-                                                        :class ["btn" "btn-primary"]
-                                                        :value "Sign in to AWS"})]}])
-    (update :body (partial template/html request))
-    (update :body xml/emit-str))
-   (ring-resp/redirect "/login")))
+ [request]
+ (let [app-id (:app-id (:path-params request))
+       email (-> request :session :email)]
+  (-> (ring-resp/response [{:tag "a"
+                            :attrs {:href "/apps/foo"}
+                            :content ["AWS"]}])
+   (update :body (partial template/html request))
+   (update :body xml/emit-str))))
 
 (defn home-page
  [request]
@@ -105,6 +115,10 @@
  {:name (keyword (gensym "remove-prefix-"))
   :enter (fn [ctx] (update-in ctx [:request :path-info] #(.substring % (count s))))})
 
+(def require-email
+ {:name (keyword (gensym "require-email-"))
+  :enter (fn [ctx] (if (get-in ctx [:request :session :email]) ctx (assoc ctx :response (ring-resp/redirect "/login"))))})
+
 (def routes
  (route/expand-routes
   [[:catch-all ["/" {:get `apex-redirects}]]
@@ -113,7 +127,8 @@
     ["/debug" common-interceptors {:any `debug-page}]
     ["/login" common-interceptors {:any `login-page}]
     ["/logout" common-interceptors {:any `logout-page}]
-    ["/apps" common-interceptors {:get `apps-page}]
+    ["/apps" (conj common-interceptors require-email) common-interceptors {:get `apps-page}]
+    ["/apps/:app-id" (conj common-interceptors require-email) {:get `app-page}]
     ["/about" common-interceptors {:get `about-page}]]]))
 
 (def keystore-password (apply str less.awful.ssl/key-store-password))
