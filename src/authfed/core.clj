@@ -58,22 +58,30 @@
      (update :body (partial template/html request))
      (update :body xml/emit-str)))))
 
+(defn make-saml-handler [config]
+ (fn [user]
+  (ring-resp/response [{:tag "form"
+                        :attrs {:method "POST" :action "https://signin.aws.amazon.com/saml"}
+                        :content [(template/input {:id "SAMLResponse"
+                                                   :type "hidden"
+                                                   :value (-> (saml/saml-response user)
+                                                             saml/sign-and-serialize
+                                                             .getBytes
+                                                             codec/base64-encode)})
+                                  (template/input {:id "submit"
+                                                   :type "submit"
+                                                   :class ["btn" "btn-primary"]
+                                                   :value "Sign in to AWS"})]}])))
+
+(def saml-apps {
+ "foo" (make-saml-handler {})
+})
+
 (defn app-page
  [request]
  (let [app-id (:app-id (:path-params request))
        email (-> request :session :email)]
-  (-> (ring-resp/response [{:tag "form"
-                            :attrs {:method "POST" :action "https://signin.aws.amazon.com/saml"}
-                            :content [(template/input {:id "SAMLResponse"
-                                                       :type "hidden"
-                                                       :value (-> (saml/saml-response email)
-                                                                 saml/sign-and-serialize
-                                                                 .getBytes
-                                                                 codec/base64-encode)})
-                                      (template/input {:id "submit"
-                                                       :type "submit"
-                                                       :class ["btn" "btn-primary"]
-                                                       :value "Sign in to AWS"})]}])
+  (-> ((get saml-apps app-id) email)
    (update :body (partial template/html request))
    (update :body xml/emit-str))))
 
