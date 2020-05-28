@@ -10,11 +10,11 @@
    (catch FileNotFoundException e dev))))
 
 (def users
- (with-open [fr (new PushbackReader (new FileReader (or-dummy "/etc/authfed/users.edn" "users.edn")))]
+ (with-open [fr (new PushbackReader (new FileReader (or-dummy "/etc/authfed/users.edn" "config/users.edn")))]
   (edn/read fr)))
 
 (def targets
- (with-open [fr (new PushbackReader (new FileReader (or-dummy "/etc/authfed/targets.edn" "targets.edn")))]
+ (with-open [fr (new PushbackReader (new FileReader (or-dummy "/etc/authfed/targets.edn" "config/targets.edn")))]
   (edn/read fr)))
 
 (def account-id

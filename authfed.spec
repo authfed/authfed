@@ -1,4 +1,4 @@
-%global version 0.0.1
+%global version 0.0.2
 %global release 1
 %global jar %{name}.jar
 %define _optdir /opt

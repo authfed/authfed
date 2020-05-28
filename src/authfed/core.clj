@@ -1,4 +1,4 @@
-(ns authfed.server
+(ns authfed.core
   (:gen-class) ; for -main method in uberjar
   (:import [org.eclipse.jetty.util.ssl SslContextFactory]
            [org.eclipse.jetty.http2 HTTP2Cipher]
@@ -156,17 +156,18 @@
    {:status 405 :body "method not supported\n"})))
 
 (def routes
- [[:catch-all ["/" {:get `apex-redirects}]]
-  [:net-authfed :https (::config/hostname config/params)
-   ["/" common-interceptors {:get `home-page}]
-   ["/api/etc/:filename"
-    ^:interceptors [#(assert (:ssl-client-cert %))]
-    {:any `etcdir}]
-   ["/debug" common-interceptors {:any `debug-page}]
-   ["/login" common-interceptors {:any `login-page}]
-   ["/logout" common-interceptors {:any `logout-page}]
-   ["/aws" common-interceptors {:get `aws-page}]
-   ["/about" common-interceptors {:get `about-page}]]])
+ (route/expand-routes
+  [[:catch-all ["/" {:get `apex-redirects}]]
+   [:net-authfed :https (::config/hostname config/params)
+    ["/" common-interceptors {:get `home-page}]
+    ["/api/etc/:filename"
+     ^:interceptors [#(assert (:ssl-client-cert %))]
+     {:any `etcdir}]
+    ["/debug" common-interceptors {:any `debug-page}]
+    ["/login" common-interceptors {:any `login-page}]
+    ["/logout" common-interceptors {:any `logout-page}]
+    ["/aws" common-interceptors {:get `aws-page}]
+    ["/about" common-interceptors {:get `about-page}]]]))
 
 (def keystore-password (apply str less.awful.ssl/key-store-password))
 (def keystore-instance
@@ -222,7 +223,7 @@
 
 (defonce runnable
   (-> service
-    (assoc ::http/routes #(route/expand-routes (deref #'routes)))
+    (assoc ::http/routes #(deref #'routes))
     (assoc ::http/join? false)
     http/create-server))
 
