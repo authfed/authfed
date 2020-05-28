@@ -131,9 +131,6 @@
                         (less.awful.ssl/load-certificate-chain (str x "-fullchain.pem")))))
   ksi))
 
-(def trust-store
-  (less.awful.ssl/trust-store (::config/cacert config/params)))
-
 ;; add another cert+key to the key store
 ; (-> runnable
 ;  ::http/container-options
@@ -154,10 +151,7 @@
    (.setKeyStore keystore-instance)
    (.setKeyStorePassword keystore-password)
    (.setCipherComparator HTTP2Cipher/COMPARATOR)
-   (.setUseCipherSuitesOrder true)
-   (.setWantClientAuth true)                   ;; want (don't need) client authentication
-   (.setTrustStore trust-store)                ;; if you provide a cert it must be signed
-   (.setEndpointIdentificationAlgorithm nil))) ;; but don't care to check hostname or ip
+   (.setUseCipherSuitesOrder true)))
 
 (def service
   {:env :prod
