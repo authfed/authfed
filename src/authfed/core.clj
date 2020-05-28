@@ -2,7 +2,6 @@
   (:gen-class) ; for -main method in uberjar
   (:import [org.eclipse.jetty.util.ssl SslContextFactory]
            [org.eclipse.jetty.http2 HTTP2Cipher]
-           [java.security MessageDigest]
            [java.io File FileNotFoundException])
   (:require [io.pedestal.http :as http]
             [io.pedestal.http.csrf :as csrf]
@@ -110,59 +109,11 @@
  {:name (keyword (gensym "remove-prefix-"))
   :enter (fn [ctx] (update-in ctx [:request :path-info] #(.substring % (count s))))})
 
-;; https://gist.github.com/jizhang/4325757
-(defn md5 [^String s]
-  (let [algorithm (MessageDigest/getInstance "MD5")
-        raw (.digest algorithm (.getBytes s))]
-    (format "%032x" (BigInteger. 1 raw))))
-
-(defn etcdir
- [request]
- (let [filename (:filename (:path-params request))
-       etcdir #(str (::config/etcdir config/params) "/" %)]
-  (case (:request-method request)
-   :head
-   (try
-    (let [body (slurp (etcdir filename))
-          validator (get (:headers request) "if-none-match")
-          etag (str "\"" (md5 body) "\"")]
-     (if (= validator etag)
-      {:status 304 :body nil :headers {"ETag" etag}}
-      {:status 200 :body nil :headers {"ETag" etag}}))
-    (catch FileNotFoundException _
-     (ring-resp/not-found "not found\n")))
-   :get
-   (try
-    (let [body (slurp (etcdir filename))
-          validator (get (:headers request) "if-none-match")
-          etag (str "\"" (md5 body) "\"")]
-     (if (= validator etag)
-      {:status 304 :body nil :headers {"ETag" etag}}
-      {:status 200 :body body :headers {"ETag" etag}}))
-    (catch FileNotFoundException _
-     (ring-resp/not-found "not found\n")))
-   :put
-   (let [tmp (File/createTempFile "upload-" "")]
-    (do
-     (io/copy (:body request) tmp)
-     (io/copy tmp (io/file (etcdir filename)))
-     (io/delete-file tmp)
-     {:status 200 :body "ok\n"}))
-   :delete
-   (if (io/delete-file (etcdir filename))
-    {:status 200 :body "ok\n"}
-    (throw (new Exception "delete failed")))
-   ;; default
-   {:status 405 :body "method not supported\n"})))
-
 (def routes
  (route/expand-routes
   [[:catch-all ["/" {:get `apex-redirects}]]
    [:net-authfed :https (::config/hostname config/params)
     ["/" common-interceptors {:get `home-page}]
-    ["/api/etc/:filename"
-     ^:interceptors [#(assert (:ssl-client-cert %))]
-     {:any `etcdir}]
     ["/debug" common-interceptors {:any `debug-page}]
     ["/login" common-interceptors {:any `login-page}]
     ["/logout" common-interceptors {:any `logout-page}]
