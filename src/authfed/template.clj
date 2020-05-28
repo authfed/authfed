@@ -48,14 +48,8 @@
               [{:tag :li :attrs {:class "nav-item"}
                 :content
                 [{:tag :a
-                  :attrs {:class (if (= "/" uri) "nav-link active" "nav-link") :href "/"}
-                  :content
-                  ["Home"]}]}
-               {:tag :li :attrs {:class "nav-item"}
-                :content
-                [{:tag :a
-                  :attrs {:class (if (= "/aws" uri) "nav-link active" "nav-link") :href "/aws"}
-                  :content ["AWS"]}]}
+                  :attrs {:class (if (= "/apps" uri) "nav-link active" "nav-link") :href "/apps"}
+                  :content ["Apps"]}]}
                {:tag :li :attrs {:class "nav-item"}
                 :content
                 [{:tag :a

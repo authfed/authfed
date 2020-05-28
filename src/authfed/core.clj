@@ -38,7 +38,7 @@
         email (-> request :form-params :email)
         password (hashers/check (-> request :form-params :password) (hashes email))]
    (if (and email password (= :post (:request-method request)))
-    (-> (ring-resp/redirect "/aws")
+    (-> (ring-resp/redirect "/apps")
         (update :session merge {:email email}))
     (-> (ring-resp/response [{:tag "form"
                               :attrs {:method "POST" :action "/login"}
@@ -58,7 +58,7 @@
      (update :body (partial template/html request))
      (update :body xml/emit-str)))))
 
-(defn aws-page
+(defn apps-page
   [request]
   (if-let [email (-> request :session :email)]
    (-> (ring-resp/response [{:tag "form"
@@ -79,11 +79,7 @@
 
 (defn home-page
  [request]
- (-> (ring-resp/response [{:tag "p" :content "Hello World!"}
-                          {:tag "br"}
-                          {:tag "pre" :content (with-out-str (pprint (:uri request)))}])
-  (update :body (partial template/html request))
-  (update :body xml/emit-str)))
+ (ring-resp/redirect "/apps"))
 
 (def common-interceptors
  ^:interceptors
@@ -117,7 +113,7 @@
     ["/debug" common-interceptors {:any `debug-page}]
     ["/login" common-interceptors {:any `login-page}]
     ["/logout" common-interceptors {:any `logout-page}]
-    ["/aws" common-interceptors {:get `aws-page}]
+    ["/apps" common-interceptors {:get `apps-page}]
     ["/about" common-interceptors {:get `about-page}]]]))
 
 (def keystore-password (apply str less.awful.ssl/key-store-password))
