@@ -9,6 +9,8 @@
             [less.awful.ssl]
             [io.pedestal.http.body-params :as body-params]
             [io.pedestal.http.ring-middlewares :as middlewares]
+            [one-time.core :as ot]
+            [one-time.qrgen :as qrgen]
             [authfed.saml :as saml]
             [authfed.config :as config]
             [authfed.template :as template]
@@ -38,7 +40,7 @@
         email (-> request :form-params :email)
         password (hashers/check (-> request :form-params :password) (hashes email))]
    (if (and email password (= :post (:request-method request)))
-    (-> (ring-resp/redirect "/apps")
+    (-> (ring-resp/redirect "/totp")
         (update :session merge {:email email}))
     (-> (ring-resp/response [{:tag "form"
                               :attrs {:method "POST" :action "/login"}
@@ -51,6 +53,59 @@
                                         (template/input {:id "password"
                                                          :type "password"
                                                          :label "Password"})
+                                        (template/input {:id "submit"
+                                                         :type "submit"
+                                                         :class ["btn" "btn-primary"]
+                                                         :value "Sign in"})]}])
+     (update :body (partial template/html request))
+     (update :body xml/emit-str)))))
+
+(defonce totp-secrets (atom (into {} (map (juxt :email :totp-secret) config/users))))
+
+(defn totp-setup-png!
+ [email]
+ (let [secret (ot/generate-secret-key)
+       qrcode (qrgen/totp-stream {:label (::config/hostname config/params)
+                                  :user email :secret secret})]
+  (swap! totp-secrets assoc email secret)
+  (str "data:image/png;base64," (codec/base64-encode (.toByteArray qrcode)))))
+
+(defn totp-page
+  [request]
+  (let [email (-> request :session :email)
+        six-digits (try (-> request :form-params :six-digits Integer.) (catch NumberFormatException _ nil))]
+   (cond
+    ;; user does not have TOTP set up yet
+    (nil? (get @totp-secrets email))
+    (-> (ring-resp/response [{:tag "img"
+                              :attrs {:src (totp-setup-png! email)}}
+                             {:tag "form"
+                              :attrs {:method "POST" :action "/totp"}
+                              :content [(template/input {:id "__anti-forgery-token"
+                                                         :type "hidden"
+                                                         :value (csrf/anti-forgery-token request)})
+                                        (template/input {:id "submit"
+                                                         :type "submit"
+                                                         :class ["btn" "btn-primary"]
+                                                         :value "Done"})]}])
+     (update :body (partial template/html request))
+     (update :body xml/emit-str))
+    ;; user already has TOTP set up, and valid six digits
+    (and six-digits (ot/is-valid-totp-token? six-digits (get @totp-secrets email)))
+    (-> (ring-resp/redirect "/apps")
+     (update :session merge {:email email :totp? true})
+     (update :body (partial template/html request))
+     (update :body xml/emit-str))
+    ;; user already has TOTP set up, so ask for six digits
+    :else
+    (-> (ring-resp/response [{:tag "form"
+                              :attrs {:method "POST" :action "/totp"}
+                              :content [(template/input {:id "__anti-forgery-token"
+                                                         :type "hidden"
+                                                         :value (csrf/anti-forgery-token request)})
+                                        (template/input {:id "six-digits"
+                                                         :type "text"
+                                                         :label "Six digits"})
                                         (template/input {:id "submit"
                                                          :type "submit"
                                                          :class ["btn" "btn-primary"]
@@ -134,6 +189,7 @@
     ["/" common-interceptors {:get `home-page}]
     ["/debug" common-interceptors {:any `debug-page}]
     ["/login" common-interceptors {:any `login-page}]
+    ["/totp" (conj common-interceptors require-email) {:any `totp-page}]
     ["/logout" common-interceptors {:any `logout-page}]
     ["/apps" (conj common-interceptors require-email) common-interceptors {:get `apps-page}]
     ["/apps/:app-id" (conj common-interceptors require-email) {:get `app-page}]

@@ -4,12 +4,16 @@
         io.pedestal/pedestal.service {:mvn/version "0.5.7"}
         io.pedestal/pedestal.jetty {:mvn/version "0.5.7"}
         less-awful-ssl {:mvn/version "1.0.6"}
+        one-time/one-time {:mvn/version "0.5.0"}
         buddy/buddy-hashers {:mvn/version "1.4.0"}
         ch.qos.logback/logback-classic {:mvn/version "1.2.3" :exclusions [org.slf4j/slf4j-api]}
         org.slf4j/jul-to-slf4j {:mvn/version "1.7.26"}
         org.slf4j/jcl-over-slf4j {:mvn/version "1.7.26"}
         org.slf4j/log4j-over-slf4j {:mvn/version "1.7.26"}}
  :paths ["src" "resources"]
+ :mvn/repos {"central" {:url "https://repo1.maven.org/maven2/"}
+             "clojars" {:url "https://repo.clojars.org/"}
+             "mulesoft" {:url "https://repository.mulesoft.org/nexus/content/repositories/public/"}}
  :aliases {:uberjar {:extra-deps {seancorfield/depstar {:mvn/version "0.5.2"}}
                      :main-opts ["-m" "hf.depstar.uberjar" "authfed.jar"]}
            :dev {:jvm-opts ["-Dlogback.configurationFile=logback-dev.xml"]}}}
