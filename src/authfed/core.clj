@@ -62,34 +62,34 @@
 
 (defonce totp-secrets (atom (into {} (map (juxt :email :totp-secret) config/users))))
 
-(defn totp-setup-png!
- [email]
- (let [secret (ot/generate-secret-key)
-       qrcode (qrgen/totp-stream {:label (::config/hostname config/params)
-                                  :user email :secret secret})]
-  (swap! totp-secrets assoc email secret)
-  (str "data:image/png;base64," (codec/base64-encode (.toByteArray qrcode)))))
+(def qrcode-uri
+ #(->> % qrgen/totp-stream .toByteArray codec/base64-encode (str "data:image/png;base64,")))
 
 (defn totp-page
   [request]
   (let [email (-> request :session :email)
-        six-digits (try (-> request :form-params :six-digits Integer.) (catch NumberFormatException _ nil))]
+        six-digits (try (-> request :form-params :six-digits Integer.)
+                    (catch NumberFormatException _ nil))]
    (cond
     ;; user does not have TOTP set up yet
     (nil? (get @totp-secrets email))
-    (-> (ring-resp/response [{:tag "img"
-                              :attrs {:src (totp-setup-png! email)}}
-                             {:tag "form"
-                              :attrs {:method "POST" :action "/totp"}
-                              :content [(template/input {:id "__anti-forgery-token"
-                                                         :type "hidden"
-                                                         :value (csrf/anti-forgery-token request)})
-                                        (template/input {:id "submit"
-                                                         :type "submit"
-                                                         :class ["btn" "btn-primary"]
-                                                         :value "Done"})]}])
-     (update :body (partial template/html request))
-     (update :body xml/emit-str))
+    (let [secret (ot/generate-secret-key)]
+     (swap! totp-secrets assoc email secret)
+     (-> (ring-resp/response [{:tag "img"
+                               :attrs {:src (qrcode-uri {:user email
+                                                         :secret secret
+                                                         :label (::config/hostname config/params)})}}
+                              {:tag "form"
+                               :attrs {:method "POST" :action "/totp"}
+                               :content [(template/input {:id "__anti-forgery-token"
+                                                          :type "hidden"
+                                                          :value (csrf/anti-forgery-token request)})
+                                         (template/input {:id "submit"
+                                                          :type "submit"
+                                                          :class ["btn" "btn-primary"]
+                                                          :value "Done"})]}])
+      (update :body (partial template/html request))
+      (update :body xml/emit-str)))
     ;; user already has TOTP set up, and valid six digits
     (and six-digits (ot/is-valid-totp-token? six-digits (get @totp-secrets email)))
     (-> (ring-resp/redirect "/apps")
