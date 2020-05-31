@@ -50,6 +50,7 @@
                                                          :value (csrf/anti-forgery-token request)})
                                         (template/input {:id "email"
                                                          :type "text"
+                                                         :autofocus true
                                                          :label "Email"})
                                         (template/input {:id "password"
                                                          :type "password"
@@ -122,6 +123,7 @@
                                                          :value (csrf/anti-forgery-token request)})
                                         (template/input {:id "six-digits"
                                                          :type "text"
+                                                         :autofocus true
                                                          :label "Six digits"})
                                         (template/input {:id "submit"
                                                          :type "submit"
