@@ -173,10 +173,12 @@
  [request]
  (ring-resp/redirect "/apps"))
 
+(defonce session-store (memory/memory-store))
+
 (def common-interceptors
  ^:interceptors
  [(body-params/body-params)
-  (middlewares/session {:store (memory/memory-store)})
+  (middlewares/session {:store session-store})
   (csrf/anti-forgery)
   http/html-body])
 
