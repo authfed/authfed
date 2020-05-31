@@ -56,7 +56,7 @@
                                                          :label "Password"})
                                         (template/input {:id "submit"
                                                          :type "submit"
-                                                         :class ["btn" "btn-primary"]
+                                                         :classes ["btn" "btn-primary"]
                                                          :value "Sign in"})]}])
      (update :body (partial template/html request))
      (update :body xml/emit-str)))))
@@ -103,7 +103,7 @@
                                                           :value (csrf/anti-forgery-token request)})
                                          (template/input {:id "submit"
                                                           :type "submit"
-                                                          :class ["btn" "btn-primary"]
+                                                          :classes ["btn" "btn-primary"]
                                                           :value "Done"})]}])
       (update :body (partial template/html request))
       (update :body xml/emit-str)))
@@ -125,7 +125,7 @@
                                                          :label "Six digits"})
                                         (template/input {:id "submit"
                                                          :type "submit"
-                                                         :class ["btn" "btn-primary"]
+                                                         :classes ["btn" "btn-primary"]
                                                          :value "Sign in"})]}])
      (update :body (partial template/html request))
      (update :body xml/emit-str)))))
@@ -142,7 +142,7 @@
                                                              codec/base64-encode)})
                                   (template/input {:id "submit"
                                                    :type "submit"
-                                                   :class ["btn" "btn-primary"]
+                                                   :classes ["btn" "btn-primary"]
                                                    :value "Sign in to AWS"})]}])))
 
 (def saml-apps {

@@ -50,7 +50,7 @@
                            :content body}]}]}))
 
 (defn input
- [{:keys [id type label value class]}]
+ [{:keys [id label classes] :as params}]
  (if label
   {:tag "div" :attrs {:class "input-group mb-3"}
    :content [{:tag "div" :attrs {:class "input-group-prepend"}
@@ -60,13 +60,11 @@
                                  :class "input-group-text"}
                          :content [label]}]}
              {:tag "input"
-              :attrs {:id id :name id
-                      :type type
-                      :value value
-                      :class (string/join " " (conj class "form-control"))}}]}
+              :attrs (merge (select-keys params [:id :type :value :autofocus])
+                            {:name id}
+                            {:class (string/join " " (conj classes "form-control"))})}]}
   {:tag "div" :attrs {:class "input-group mb-3"}
    :content [{:tag "input"
-              :attrs {:id id :name id
-                      :type type
-                      :value value
-                      :class (string/join " " (conj class "form-control"))}}]}))
+              :attrs (merge (select-keys params [:id :type :value :autofocus])
+                            {:name id}
+                            {:class (string/join " " (conj classes "form-control"))})}]}))
