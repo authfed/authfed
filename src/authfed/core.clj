@@ -1,6 +1,7 @@
 (ns authfed.core
   (:gen-class) ; for -main method in uberjar
   (:import [org.eclipse.jetty.util.ssl SslContextFactory]
+           [java.net URLEncoder]
            [org.eclipse.jetty.http2 HTTP2Cipher]
            [java.io File FileNotFoundException])
   (:require [io.pedestal.http :as http]
@@ -65,6 +66,18 @@
 (def qrcode-uri
  #(->> % qrgen/totp-stream .toByteArray codec/base64-encode (str "data:image/png;base64,")))
 
+(defn otpauth-uri
+ [{:keys [user secret label]}]
+ (str
+  "otpauth://totp/"
+  (URLEncoder/encode label)
+  ":"
+  (URLEncoder/encode user)
+  "?secret="
+  (URLEncoder/encode secret)
+  "&issuer="
+  (URLEncoder/encode label)))
+
 (defn totp-page
   [request]
   (let [email (-> request :session :email)
@@ -73,12 +86,16 @@
    (cond
     ;; user does not have TOTP set up yet
     (nil? (get @totp-secrets email))
-    (let [secret (ot/generate-secret-key)]
+    (let [secret (ot/generate-secret-key)
+          params {:user email
+                  :secret secret
+                  :label (::config/hostname config/params)}]
      (swap! totp-secrets assoc email secret)
      (-> (ring-resp/response [{:tag "img"
-                               :attrs {:src (qrcode-uri {:user email
-                                                         :secret secret
-                                                         :label (::config/hostname config/params)})}}
+                               :attrs {:src (qrcode-uri params)}}
+                              {:tag "p" :content [{:tag "a"
+                                                   :attrs {:href (otpauth-uri params)}
+                                                   :content "Open in soft token app"}]}
                               {:tag "form"
                                :attrs {:method "POST" :action "/totp"}
                                :content [(template/input {:id "__anti-forgery-token"
