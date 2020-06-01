@@ -17,15 +17,15 @@
  (with-open [fr (new PushbackReader (new FileReader (or-dummy "/etc/authfed/targets.edn" "config/targets.edn")))]
   (edn/read fr)))
 
+(def mac? (-> (System/getProperty "os.name") .toLowerCase (.startsWith "mac")))
+
 (def account-id
- (let [endpoint "http://169.254.169.254/latest/meta-data/iam/info"]
+ (let [endpoint (when-not mac? "http://169.254.169.254/latest/meta-data/iam/info")]
   (try (-> (slurp endpoint)
            json/read-str
            (get "InstanceProfileArn")
            (.substring 13 25))
    (catch Exception e "1234"))))
-
-(def mac? (-> (System/getProperty "os.name") .toLowerCase (.startsWith "mac")))
 
 (def params
  {::hostname (if mac? "localhost" "authfed.net")
