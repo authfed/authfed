@@ -199,9 +199,13 @@
  {:name (keyword (gensym "remove-prefix-"))
   :enter (fn [ctx] (update-in ctx [:request :path-info] #(.substring % (count s))))})
 
-(def require-email
- {:name (keyword (gensym "require-email-"))
-  :enter (fn [ctx] (if (get-in ctx [:request :session :email]) ctx (assoc ctx :response (ring-resp/redirect "/login"))))})
+(defn check [ks]
+ {:name (keyword (gensym "require-"))
+  :enter (fn [ctx]
+          (let [session (:session (:request ctx))]
+           (if (every? session ks)
+            ctx
+            (assoc ctx :response (ring-resp/redirect "/login")))))})
 
 (def routes
  (route/expand-routes
@@ -210,10 +214,10 @@
     ["/" common-interceptors {:get `home-page}]
     ["/debug" common-interceptors {:any `debug-page}]
     ["/login" common-interceptors {:any `login-page}]
-    ["/totp" (conj common-interceptors require-email) {:any `totp-page}]
+    ["/totp" (conj common-interceptors (check [:email])) {:any `totp-page}]
     ["/logout" common-interceptors {:any `logout-page}]
-    ["/apps" (conj common-interceptors require-email) common-interceptors {:get `apps-page}]
-    ["/apps/:app-id" (conj common-interceptors require-email) {:get `app-page}]
+    ["/apps" (conj common-interceptors (check [:email :totp?])) common-interceptors {:get `apps-page}]
+    ["/apps/:app-id" (conj common-interceptors (check [:email :totp?])) {:get `app-page}]
     ["/about" common-interceptors {:get `about-page}]]]))
 
 (def keystore-password (apply str less.awful.ssl/key-store-password))
