@@ -34,7 +34,7 @@
 
 (defn logout-page
  [request]
- (-> (ring-resp/redirect "/")
+ (-> (ring-resp/redirect "/login")
   (update :session dissoc :email)))
 
 (defn login-page
@@ -177,7 +177,7 @@
 
 (defn home-page
  [request]
- (ring-resp/redirect "/apps"))
+ (ring-resp/redirect "/login"))
 
 (defonce session-store (memory/memory-store))
 
