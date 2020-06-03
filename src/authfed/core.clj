@@ -185,6 +185,7 @@
  ^:interceptors
  [(body-params/body-params)
   (middlewares/session {:store session-store})
+  (middlewares/flash)
   (csrf/anti-forgery)
   http/html-body])
 
@@ -205,13 +206,20 @@
  {:name (keyword (gensym "remove-prefix-"))
   :enter (fn [ctx] (update-in ctx [:request :path-info] #(.substring % (count s))))})
 
+(def error-message
+ {:tag "span"
+  :content [{:tag "strong" :content ["Error: "]}
+            "please log in."]})
+
 (defn check [ks]
  {:name (keyword (gensym "require-"))
   :enter (fn [ctx]
           (let [session (:session (:request ctx))]
            (if (every? session ks)
             ctx
-            (assoc ctx :response (ring-resp/redirect "/login")))))})
+            (-> ctx
+             (assoc-in [:response] (ring-resp/redirect "/login"))
+             (assoc-in [:response :flash :error] error-message)))))})
 
 (def routes
  (route/expand-routes

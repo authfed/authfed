@@ -19,6 +19,14 @@
           :href "https://fonts.googleapis.com/css?family=Poppins%3A400%2C700%7CLato%3A400%2C700%2C400italic%2C700italic%7CInconsolata%3A400%2C700&amp;subset=latin%2Clatin-ext"
           :crossorigin "anonymous"}})
 
+(defn flash-message [request]
+ (when-let [error (:error (:flash request))]
+  {:tag :div :attrs {:class "alert alert-danger alert-dismissible" :style "margin: 20px;"}
+   :content [{:tag :button :attrs {:type "button" :class "close"
+                                   :onclick "this.parentElement.remove();"}
+              :content ["×"]}
+             error]}))
+
 (defn nav [request]
  (let [uri (:uri request)
        logged-in? (contains? (:session request) :email)]
@@ -43,7 +51,7 @@
    :content [{:tag "head"
               :content [title meta-charset meta-width stylesheet font-stylesheet]}
              {:tag "body"
-              :content [(nav request)
+              :content [(flash-message request) (nav request)
                           {:tag "div"
                            :attrs {:class "container"
                                    :style "margin-top: 40px;"}
