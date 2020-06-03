@@ -85,8 +85,12 @@
 (defn totp-page
   [request]
   (let [email (-> request :session :email)
+        secret (get @totp-secrets email)
         six-digits (try (-> request :form-params :six-digits Integer.)
-                    (catch NumberFormatException _ nil))]
+                    (catch NumberFormatException _ nil))
+        totp-okay? (and six-digits secret
+                    (or (ot/is-valid-totp-token? six-digits secret {:date (Date/from (Instant/now))})
+                        (ot/is-valid-totp-token? six-digits secret {:date (Date/from (.minusSeconds (Instant/now) 5))})))]
    (cond
     ;; user does not have TOTP set up yet
     (nil? (get @totp-secrets email))
@@ -112,11 +116,7 @@
       (update :body (partial template/html request))
       (update :body xml/emit-str)))
     ;; user already has TOTP set up, and valid six digits
-    (and six-digits
-     (let [secret (get @totp-secrets email)]
-      (or (ot/is-valid-totp-token? six-digits secret)
-          (ot/is-valid-totp-token? six-digits secret
-           {:date (Date/from (.minusSeconds (Instant/now) 5))}))))
+    (and six-digits totp-okay?)
     (-> (ring-resp/redirect "/apps")
      (update :session merge {:email email :totp? true})
      (update :body (partial template/html request))
