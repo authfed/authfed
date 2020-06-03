@@ -2,6 +2,8 @@
   (:gen-class) ; for -main method in uberjar
   (:import [org.eclipse.jetty.util.ssl SslContextFactory]
            [java.net URLEncoder]
+           [java.util Date]
+           [java.time Instant]
            [org.eclipse.jetty.http2 HTTP2Cipher]
            [java.io File FileNotFoundException])
   (:require [io.pedestal.http :as http]
@@ -109,7 +111,11 @@
       (update :body (partial template/html request))
       (update :body xml/emit-str)))
     ;; user already has TOTP set up, and valid six digits
-    (and six-digits (ot/is-valid-totp-token? six-digits (get @totp-secrets email)))
+    (and six-digits
+     (let [secret (get @totp-secrets email)]
+      (or (ot/is-valid-totp-token? six-digits secret)
+          (ot/is-valid-totp-token? six-digits secret
+           {:date (Date/from (.minusSeconds (Instant/now) 5))}))))
     (-> (ring-resp/redirect "/apps")
      (update :session merge {:email email :totp? true})
      (update :body (partial template/html request))
