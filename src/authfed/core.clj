@@ -62,7 +62,7 @@
                                                          :type "submit"
                                                          :classes ["btn" "btn-primary"]
                                                          :value "Sign in"})]}])
-     (update :body (partial template/html request))
+     (update :body (partial template/html (assoc-in request [:flash :error] (when (and email (not password-okay?)) "Username or password incorrect."))))
      (update :body xml/emit-str)))))
 
 (defonce totp-secrets (atom (into {} (map (juxt :email :totp-secret) config/users))))
@@ -136,7 +136,7 @@
                                                          :type "submit"
                                                          :classes ["btn" "btn-primary"]
                                                          :value "Sign in"})]}])
-     (update :body (partial template/html request))
+     (update :body (partial template/html (assoc-in request [:flash :error] (when (and six-digits (not totp-okay?)) "Six-digit TOTP was incorrect."))))
      (update :body xml/emit-str)))))
 
 (defn make-saml-handler [config]
