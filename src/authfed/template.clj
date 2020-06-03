@@ -21,7 +21,7 @@
 
 (defn flash-message [request]
  (when-let [error (:error (:flash request))]
-  {:tag :div :attrs {:class "alert alert-danger alert-dismissible" :style "margin: 20px;"}
+  {:tag :div :attrs {:class "alert alert-danger alert-dismissible"}
    :content [{:tag :button :attrs {:type "button" :class "close"
                                    :onclick "this.parentElement.remove();"}
               :content ["×"]}
@@ -51,11 +51,11 @@
    :content [{:tag "head"
               :content [title meta-charset meta-width stylesheet font-stylesheet]}
              {:tag "body"
-              :content [(flash-message request) (nav request)
-                          {:tag "div"
-                           :attrs {:class "container"
-                                   :style "margin-top: 40px;"}
-                           :content body}]}]}))
+              :content [(nav request)
+                        {:tag "div"
+                         :attrs {:class "container"
+                                 :style "margin-top: 40px;"}
+                         :content (cons (flash-message request) body)}]}]}))
 
 (defn input
  [{:keys [id label classes] :as params}]
