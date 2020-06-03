@@ -41,8 +41,9 @@
   [request]
   (let [hashes (into {} (map (juxt :email :password) config/users))
         email (-> request :form-params :email)
-        password (hashers/check (-> request :form-params :password) (hashes email))]
-   (if (and email password (= :post (:request-method request)))
+        password (-> request :form-params :password)
+        password-okay? (hashers/check password (hashes email))]
+   (if (and email password-okay? (= :post (:request-method request)))
     (-> (ring-resp/redirect "/totp")
         (update :session merge {:email email}))
     (-> (ring-resp/response [{:tag "form"
