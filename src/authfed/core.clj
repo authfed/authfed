@@ -145,7 +145,7 @@
                         :attrs {:method "POST" :action "https://signin.aws.amazon.com/saml"}
                         :content [(template/input {:id "SAMLResponse"
                                                    :type "hidden"
-                                                   :value (-> (saml/saml-response user)
+                                                   :value (-> (saml/saml-response user config)
                                                              saml/sign-and-serialize
                                                              .getBytes
                                                              codec/base64-encode)})
@@ -154,25 +154,27 @@
                                                    :classes ["btn" "btn-primary"]
                                                    :value "Sign in to AWS"})]}])))
 
-(def saml-apps {
- "foo" (make-saml-handler {})
-})
+(def saml-apps
+ (into {} (map (juxt :id #(-> % (dissoc :id) (update :handler make-saml-handler))) config/saml)))
 
 (defn app-page
  [request]
  (let [app-id (:app-id (:path-params request))
        email (-> request :session :email)]
-  (-> ((get saml-apps app-id) email)
+  (assert (and app-id email))
+  (-> ((:handler (get saml-apps app-id)) email)
    (update :body (partial template/html request))
    (update :body xml/emit-str))))
 
 (defn apps-page
  [request]
- (let [app-id (:app-id (:path-params request))
-       email (-> request :session :email)]
-  (-> (ring-resp/response [{:tag "a"
-                            :attrs {:href "/apps/foo"}
-                            :content ["AWS"]}])
+ (let [email (-> request :session :email)]
+  (-> (ring-resp/response
+       [{:tag "ul"
+         :content (for [k (keys saml-apps)]
+                   {:tag "li"
+                    :content [{:tag "a" :attrs {:href (str "/apps/" k)}
+                               :content [(:name (saml-apps k))]}]})}])
    (update :body (partial template/html request))
    (update :body xml/emit-str))))
 

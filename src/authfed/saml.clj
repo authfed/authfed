@@ -27,12 +27,11 @@
 (def sp-endpoint "https://signin.aws.amazon.com/saml") ;; SP Attribute Consume Service Endpoint
 (def target-url "https://signin.aws.amazon.com/saml") ;; Target URL, Destination of the Response
 
-(defn saml-response [& args]
+(defn saml-response [email config]
  (let [request-id (str "request-" (java.util.UUID/randomUUID))
        response-id (str "response-" (java.util.UUID/randomUUID))
        assertion-id (str "assertion-" (java.util.UUID/randomUUID))
        session-id (str "session-" (java.util.UUID/randomUUID))
-       email (first args)
        inst (java.time.Instant/now)
        now (str inst)
        recent (str (.minusSeconds inst (* 30)))
@@ -124,7 +123,7 @@
          :content
          [{:tag ::saml/AttributeValue
            :attrs #::xsi{:type "xs:string"}
-           :content [(::config/saml-role-mapping config/params)]}]}
+           :content [(:role-mapping config)]}]}
         {:tag ::saml/Attribute
          :attrs
          {:Name "eduPersonAffiliation"

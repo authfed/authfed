@@ -17,6 +17,10 @@
  (with-open [fr (new PushbackReader (new FileReader (or-dummy "/etc/authfed/targets.edn" "config/targets.edn")))]
   (edn/read fr)))
 
+(def saml
+ (with-open [fr (new PushbackReader (new FileReader (or-dummy "/etc/authfed/saml.edn" "config/saml.edn")))]
+  (edn/read fr)))
+
 (def mac? (-> (System/getProperty "os.name") .toLowerCase (.startsWith "mac")))
 
 (def account-id
