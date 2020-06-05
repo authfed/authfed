@@ -123,7 +123,7 @@
          :content
          [{:tag ::saml/AttributeValue
            :attrs #::xsi{:type "xs:string"}
-           :content [(:role-mapping config)]}]}
+           :content [(::role-mapping config)]}]}
         {:tag ::saml/Attribute
          :attrs
          {:Name "eduPersonAffiliation"
@@ -148,18 +148,14 @@
 
 (def fac (XMLSignatureFactory/getInstance "DOM"))
 
-(def kp
-  (less.awful.ssl/key-pair
-    (less.awful.ssl/public-key (::config/saml-public-key config/params))
-    (less.awful.ssl/private-key (::config/saml-private-key config/params))))
-
-(def kif (.getKeyInfoFactory fac))
-(def kv (.newKeyValue kif (.getPublic kp)))
-
-(def ki (.newKeyInfo kif (Collections/singletonList kv)))
-
-(defn sign-and-serialize [data]
+(defn sign-and-serialize [data config]
  (let [assertion-id (-> data :content second :attrs :ID)
+       kp (less.awful.ssl/key-pair
+            (less.awful.ssl/public-key (::public-key config))
+            (less.awful.ssl/private-key (::private-key config)))
+       kif (.getKeyInfoFactory fac)
+       kv (.newKeyValue kif (.getPublic kp))
+       ki (.newKeyInfo kif (Collections/singletonList kv))
        docu (.parse (.newDocumentBuilder dbf)
              (new StringBufferInputStream (emit-str data)))
        docuref (.newReference fac
@@ -186,15 +182,3 @@
         baos (new ByteArrayOutputStream)]
    (.transform trans (new DOMSource docu) (new StreamResult baos))
    (str baos))))
-
-(comment
-
-(ns authfed.saml)
-(use 'clojure.repl 'clojure.pprint 'clojure.java.javadoc)
-(println (sign-and-serialize (saml-response)))
-
-(require 'ring.util.codec)
-(let [samlresponse (sign-and-serialize (saml-response))] (spit "test.html" (str "<form method=\"POST\" action=\"https://signin.aws.amazon.com/saml\"><input type=\"hidden\" name=\"SAMLResponse\" value=" (ring.util.codec/base64-encode (.getBytes samlresponse)) " /><input type=\"submit\" value=\"Submit\" /></form>")))
-;; open -a /Applications/Safari.app
-
-)

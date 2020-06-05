@@ -140,29 +140,32 @@
      (update :body xml/emit-str)))))
 
 (defn make-saml-handler [config]
- (fn [user]
-  (ring-resp/response [{:tag "form"
-                        :attrs {:method "POST" :action "https://signin.aws.amazon.com/saml"}
-                        :content [(template/input {:id "SAMLResponse"
-                                                   :type "hidden"
-                                                   :value (-> (saml/saml-response user config)
-                                                             saml/sign-and-serialize
-                                                             .getBytes
-                                                             codec/base64-encode)})
-                                  (template/input {:id "submit"
-                                                   :type "submit"
-                                                   :classes ["btn" "btn-primary"]
-                                                   :value "Sign in to AWS"})]}])))
+ (with-meta
+  (fn [email]
+   (ring-resp/response [{:tag "form"
+                         :attrs {:method "POST" :action "https://signin.aws.amazon.com/saml"}
+                         :content [(template/input {:id "SAMLResponse"
+                                                    :type "hidden"
+                                                    :value (-> email
+                                                              (saml/saml-response config)
+                                                              (saml/sign-and-serialize config)
+                                                              .getBytes
+                                                              codec/base64-encode)})
+                                   (template/input {:id "submit"
+                                                    :type "submit"
+                                                    :classes ["btn" "btn-primary"]
+                                                    :value "Sign in to AWS"})]}]))
+  config))
 
 (def saml-apps
- (into {} (map (juxt :id #(-> % (dissoc :id) (update :handler make-saml-handler))) config/saml)))
+ (into {} (map (juxt ::saml/id make-saml-handler) config/saml)))
 
 (defn app-page
  [request]
  (let [app-id (:app-id (:path-params request))
        email (-> request :session :email)]
   (assert (and app-id email))
-  (-> ((:handler (get saml-apps app-id)) email)
+  (-> ((get saml-apps app-id) email)
    (update :body (partial template/html request))
    (update :body xml/emit-str))))
 
@@ -174,7 +177,7 @@
          :content (for [k (keys saml-apps)]
                    {:tag "li"
                     :content [{:tag "a" :attrs {:href (str "/apps/" k)}
-                               :content [(:name (saml-apps k))]}]})}])
+                               :content [(::saml/name (meta (saml-apps k)))]}]})}])
    (update :body (partial template/html request))
    (update :body xml/emit-str))))
 

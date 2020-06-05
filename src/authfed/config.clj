@@ -23,13 +23,13 @@
 
 (def mac? (-> (System/getProperty "os.name") .toLowerCase (.startsWith "mac")))
 
-(def account-id
- (let [endpoint (when-not mac? "http://169.254.169.254/latest/meta-data/iam/info")]
-  (try (-> (slurp endpoint)
-           json/read-str
-           (get "InstanceProfileArn")
-           (.substring 13 25))
-   (catch Exception e "1234"))))
+; (def account-id
+;  (let [endpoint (when-not mac? "http://169.254.169.254/latest/meta-data/iam/info")]
+;   (try (-> (slurp endpoint)
+;            json/read-str
+;            (get "InstanceProfileArn")
+;            (.substring 13 25))
+;    (catch Exception e "1234"))))
 
 (def params
  {::hostname (if mac? "localhost" "authfed.net")
@@ -47,7 +47,4 @@
                   (map #(str "/etc/authfed/" %))
                   (into [])))
   ::http-port (if mac? 8080 80)
-  ::ssl-port (if mac? 8443 443)
-  ::saml-private-key (or-dummy "/etc/authfed/aws-private.pem" "dummy-private.pem")
-  ::saml-public-key (or-dummy "/etc/authfed/aws-public.pem" "dummy-public.pem")
-  ::saml-role-mapping (str "arn:aws:iam::" account-id ":role/test20200424,arn:aws:iam::" account-id ":saml-provider/authfed-net")})
+  ::ssl-port (if mac? 8443 443)})
