@@ -5,20 +5,20 @@
 Start a REPL using `clj -A:dev` then run:
 
 ```clj
-(ns authfed.server)
+(ns authfed.core)
 (use 'clojure.repl 'clojure.pprint 'clojure.java.javadoc)
-(load-file "src/authfed/server.clj")
+(load-file "src/authfed/core.clj")
 (http/start runnable)
 ```
 
-And then point your web browser to http://localhost:8080/
+And then point your web browser to https://localhost:8443/
 
 ## Socket Repl
 
 I recommend adding something like this to your ~/.clojure/deps.edn file under {:aliases {:socket ... }}
 
 ```edn
-{:jvm-opts ["-Dclojure.server.repl={:address,\"127.0.0.1\",:port,50505,:accept,clojure.core.server/repl}"]}
+{:jvm-opts ["-Dclojure.server.repl={:port,50505,:accept,clojure.core.server/repl}"]}
 ```
 
 ## Logging
