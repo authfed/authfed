@@ -1,11 +1,11 @@
-(ns authfed.service-test
+(ns authfed.core-test
   (:require [clojure.test :refer :all]
             [io.pedestal.test :refer :all]
             [io.pedestal.http :as bootstrap]
-            [authfed.service :as service]))
+            [authfed.core :as core]))
 
 (def service
-  (::bootstrap/service-fn (bootstrap/create-servlet service/service)))
+  (::bootstrap/service-fn (bootstrap/create-servlet core/service)))
 
 (deftest home-page-test
   (is (=
@@ -36,4 +36,3 @@
         "X-Download-Options" "noopen"
         "X-Permitted-Cross-Domain-Policies" "none"
         "Content-Security-Policy" "object-src 'none'; script-src 'unsafe-inline' 'unsafe-eval' 'strict-dynamic' https: http:;"})))
-
