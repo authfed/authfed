@@ -1,1 +1,1 @@
-JAVA_OPTS="-Xmx256m -Xms256m -Dlogback.configurationFile=/etc/authfed/logback.xml"
+JAVA_OPTS="-Xmx64m -Xms64m -Dlogback.configurationFile=/etc/authfed/logback.xml"
