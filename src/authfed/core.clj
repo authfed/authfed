@@ -143,7 +143,8 @@
  (with-meta
   (fn [email]
    (ring-resp/response [{:tag "form"
-                         :attrs {:method "POST" :action "https://signin.aws.amazon.com/saml"}
+                         :attrs {:method "POST" :target "_blank"
+                                 :action "https://signin.aws.amazon.com/saml"}
                          :content [(template/input {:id "SAMLResponse"
                                                     :type "hidden"
                                                     :value (-> email
