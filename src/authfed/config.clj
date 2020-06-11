@@ -21,6 +21,14 @@
  (with-open [fr (new PushbackReader (new FileReader (or-dummy "/etc/authfed/saml.edn" "config/saml.edn")))]
   (edn/read fr)))
 
+(def sms
+ (with-open [fr (new PushbackReader (new FileReader (or-dummy "/etc/authfed/sms.edn" "config/sms.edn")))]
+  (edn/read fr)))
+
+(def email
+ (with-open [fr (new PushbackReader (new FileReader (or-dummy "/etc/authfed/email.edn" "config/email.edn")))]
+  (edn/read fr)))
+
 (def mac? (-> (System/getProperty "os.name") .toLowerCase (.startsWith "mac")))
 
 ; (def account-id

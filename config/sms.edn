@@ -1,0 +1,2 @@
+{:authfed.sms/endpoint "https://api.smsbroadcast.com.au/api-adv.php"
+ :authfed.sms/params {:username "your username" :password "your password" :from "sender id"}})
