@@ -1,5 +1,5 @@
 (ns authfed.sms
- (:require [clj-http.client :as hc]
+ (:require [hato.client :as hc]
            [authfed.config :as config]))
 
 (defn send-message!

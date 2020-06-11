@@ -1,7 +1,7 @@
 {:deps {org.clojure/clojure {:mvn/version "1.10.1"}
         org.clojure/data.json {:mvn/version "1.0.0"}
         org.clojure/data.xml {:mvn/version "0.2.0-alpha6"}
-        clj-http {:mvn/version "3.10.1"}
+        hato {:mvn/version "0.6.0"}
         amazonica {:mvn/version "0.3.48"
                    :exclusions [com.amazonaws/aws-java-sdk
                                 com.amazonaws/amazon-kinesis-client]}
