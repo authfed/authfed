@@ -12,8 +12,6 @@
             [less.awful.ssl]
             [io.pedestal.http.body-params :as body-params]
             [io.pedestal.http.ring-middlewares :as middlewares]
-            [one-time.core :as ot]
-            [one-time.qrgen :as qrgen]
             [authfed.saml :as saml]
             [authfed.config :as config]
             [authfed.template :as template]
@@ -35,17 +33,18 @@
 (defn logout-page
  [request]
  (-> (ring-resp/redirect "/login")
+  (update :session dissoc :mobile)
   (update :session dissoc :email)))
 
 (defn login-page
   [request]
-  (let [hashes (into {} (map (juxt :email :password) config/users))
-        email (-> request :form-params :email)
-        password (-> request :form-params :password)
-        password-okay? (hashers/check password (hashes email))]
-   (if (and email password-okay? (= :post (:request-method request)))
-    (-> (ring-resp/redirect "/totp")
-        (update :session merge {:email email}))
+  (let [post? (= :post (:request-method request))
+        {:keys [email mobile]} (:form-params request)
+        id {:email email :mobile mobile}
+        user (first (filter #(= id (select-keys % [:email :mobile])) config/users))]
+   (if (and user post?)
+    (-> (ring-resp/redirect "/apps")
+        (update :session merge id))
     (-> (ring-resp/response [{:tag "form"
                               :attrs {:method "POST" :action "/login"}
                               :content [(template/input {:id "__anti-forgery-token"
@@ -55,88 +54,15 @@
                                                          :type "text"
                                                          :autofocus true
                                                          :label "Email"})
-                                        (template/input {:id "password"
-                                                         :type "password"
-                                                         :label "Password"})
-                                        (template/input {:id "submit"
-                                                         :type "submit"
-                                                         :classes ["btn" "btn-primary"]
-                                                         :value "Sign in"})]}])
-     (update :body (partial template/html (assoc-in request [:flash :error] (when (and email (not password-okay?)) "Username or password incorrect."))))
-     (update :body xml/emit-str)))))
-
-(defonce totp-secrets (atom (into {} (map (juxt :email :totp-secret) config/users))))
-
-(def qrcode-uri
- #(->> % qrgen/totp-stream .toByteArray codec/base64-encode (str "data:image/png;base64,")))
-
-(defn otpauth-uri
- [{:keys [user secret label]}]
- (str
-  "otpauth://totp/"
-  (URLEncoder/encode label)
-  ":"
-  (URLEncoder/encode user)
-  "?secret="
-  (URLEncoder/encode secret)
-  "&issuer="
-  (URLEncoder/encode label)))
-
-(defn totp-page
-  [request]
-  (let [email (-> request :session :email)
-        secret (get @totp-secrets email)
-        six-digits (try (-> request :form-params :six-digits Integer.)
-                    (catch NumberFormatException _ nil))
-        totp-okay? (and six-digits secret
-                    (or (ot/is-valid-totp-token? six-digits secret {:date (Date/from (Instant/now))})
-                        (ot/is-valid-totp-token? six-digits secret {:date (Date/from (.minusSeconds (Instant/now) 5))})))]
-   (cond
-    ;; user does not have TOTP set up yet
-    (nil? (get @totp-secrets email))
-    (let [secret (ot/generate-secret-key)
-          params {:user email
-                  :secret secret
-                  :label (::config/hostname config/params)}]
-     (swap! totp-secrets assoc email secret)
-     (-> (ring-resp/response [{:tag "img"
-                               :attrs {:src (qrcode-uri params)}}
-                              {:tag "p" :content [{:tag "a"
-                                                   :attrs {:href (otpauth-uri params)}
-                                                   :content "Open in soft token app"}]}
-                              {:tag "form"
-                               :attrs {:method "POST" :action "/totp"}
-                               :content [(template/input {:id "__anti-forgery-token"
-                                                          :type "hidden"
-                                                          :value (csrf/anti-forgery-token request)})
-                                         (template/input {:id "submit"
-                                                          :type "submit"
-                                                          :classes ["btn" "btn-primary"]
-                                                          :value "Done"})]}])
-      (update :body (partial template/html request))
-      (update :body xml/emit-str)))
-    ;; user already has TOTP set up, and valid six digits
-    (and six-digits totp-okay?)
-    (-> (ring-resp/redirect "/apps")
-     (update :session merge {:email email :totp? true})
-     (update :body (partial template/html request))
-     (update :body xml/emit-str))
-    ;; user already has TOTP set up, so ask for six digits
-    :else
-    (-> (ring-resp/response [{:tag "form"
-                              :attrs {:method "POST" :action "/totp"}
-                              :content [(template/input {:id "__anti-forgery-token"
-                                                         :type "hidden"
-                                                         :value (csrf/anti-forgery-token request)})
-                                        (template/input {:id "six-digits"
+                                        (template/input {:id "mobile"
                                                          :type "text"
                                                          :autofocus true
-                                                         :label "Six digits"})
+                                                         :label "Mobile"})
                                         (template/input {:id "submit"
                                                          :type "submit"
                                                          :classes ["btn" "btn-primary"]
                                                          :value "Sign in"})]}])
-     (update :body (partial template/html (assoc-in request [:flash :error] (when (and six-digits (not totp-okay?)) "Six-digit TOTP was incorrect."))))
+     (update :body (partial template/html (assoc-in request [:flash :error] (when (and post? (nil? user)) "User not found."))))
      (update :body xml/emit-str)))))
 
 (defn make-saml-handler [config]
@@ -234,10 +160,9 @@
     ["/" common-interceptors {:get `home-page}]
     ["/debug" common-interceptors {:any `debug-page}]
     ["/login" common-interceptors {:any `login-page}]
-    ["/totp" (conj common-interceptors (check [:email])) {:any `totp-page}]
     ["/logout" common-interceptors {:any `logout-page}]
-    ["/apps" (conj common-interceptors (check [:email :totp?])) common-interceptors {:get `apps-page}]
-    ["/apps/:app-id" (conj common-interceptors (check [:email :totp?])) {:get `app-page}]
+    ["/apps" (conj common-interceptors (check [:email :mobile])) common-interceptors {:get `apps-page}]
+    ["/apps/:app-id" (conj common-interceptors (check [:email :mobile])) {:get `app-page}]
     ["/about" common-interceptors {:get `about-page}]]]))
 
 (def keystore-password (apply str less.awful.ssl/key-store-password))
