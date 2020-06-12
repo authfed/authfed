@@ -7,3 +7,8 @@
  [opts]
  (let [{::keys [params endpoint]} config/email]
   (ses/send-email {:endpoint endpoint} (merge params opts))))
+
+(when config/mac?
+ (defn send-message!
+  [opts]
+  (-> opts :message :body :text println)))

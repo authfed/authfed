@@ -12,3 +12,9 @@
                (.startsWith body "OK") true))
    body
    (throw (new Exception (str "failed to send: " body))))))
+
+(when config/mac?
+ (defn send-message!
+  "Try to send message by POST request to gateway endpoint, throw exception on error."
+  [opts]
+  (-> opts :message println)))
