@@ -15,7 +15,6 @@
             [authfed.saml :as saml]
             [authfed.config :as config]
             [authfed.template :as template]
-            [buddy.hashers :as hashers]
             [clojure.data.xml :as xml]
             [clojure.java.io :as io]
             [clojure.pprint :refer [pprint]]
@@ -23,12 +22,6 @@
             [ring.middleware.session.memory :as memory]
             [ring.util.codec :as codec]
             [ring.util.response :as ring-resp]))
-
-(defn about-page
-  [request]
-  (ring-resp/response (format "Clojure %s - served from %s"
-                              (clojure-version)
-                              (route/url-for ::about-page))))
 
 (defn logout-page
  [request]
@@ -121,13 +114,6 @@
   (csrf/anti-forgery)
   http/html-body])
 
-(defn debug-page
- [request]
- (do (def asdf request)
-  {:status 200
-   :headers {"Content-Type" "text/plain"}
-   :body (str (with-out-str (pprint request)) \newline)}))
-
 (defn apex-redirects
  [request]
  (if-let [target (get config/targets (or (:server-name request) (get (:headers request) "host")))]
@@ -158,12 +144,10 @@
   [[:catch-all ["/" {:get `apex-redirects}]]
    [:net-authfed :https (::config/hostname config/params)
     ["/" common-interceptors {:get `home-page}]
-    ["/debug" common-interceptors {:any `debug-page}]
     ["/login" common-interceptors {:any `login-page}]
     ["/logout" common-interceptors {:any `logout-page}]
     ["/apps" (conj common-interceptors (check [:email :mobile])) common-interceptors {:get `apps-page}]
-    ["/apps/:app-id" (conj common-interceptors (check [:email :mobile])) {:get `app-page}]
-    ["/about" common-interceptors {:get `about-page}]]]))
+    ["/apps/:app-id" (conj common-interceptors (check [:email :mobile])) {:get `app-page}]]]))
 
 (def keystore-password (apply str less.awful.ssl/key-store-password))
 (def keystore-instance
@@ -175,21 +159,6 @@
                         less.awful.ssl/key-store-password
                         (less.awful.ssl/load-certificate-chain (str x "-fullchain.pem")))))
   ksi))
-
-;; add another cert+key to the key store
-; (-> runnable
-;  ::http/container-options
-;  :ssl-context-factory
-;  .getKeyStore
-;  (.setKeyEntry "cert2"
-;                (less.awful.ssl/private-key "dummy-private2.pem")
-;                less.awful.ssl/key-store-password
-;                (less.awful.ssl/load-certificate-chain "dummy-public2.pem")))
-;; reload the ssl context factory
-; (-> runnable
-;  ::http/container-options
-;  :ssl-context-factory
-;  (.reload (reify java.util.function.Consumer (accept [this _] _))))
 
 (def ssl-context-factory
   (doto (new SslContextFactory)
