@@ -12,16 +12,22 @@
             [less.awful.ssl]
             [io.pedestal.http.body-params :as body-params]
             [io.pedestal.http.ring-middlewares :as middlewares]
+            [one-time.core :as ot]
             [authfed.saml :as saml]
             [authfed.config :as config]
             [authfed.template :as template]
+            [authfed.email :as email]
+            [authfed.sms :as sms]
             [clojure.data.xml :as xml]
             [clojure.java.io :as io]
+            [clojure.set :as set]
             [clojure.pprint :refer [pprint]]
             [ring.middleware.resource :as resource]
             [ring.middleware.session.memory :as memory]
             [ring.util.codec :as codec]
             [ring.util.response :as ring-resp]))
+
+(defonce state (atom {}))
 
 (defn logout-page
  [request]
@@ -29,15 +35,21 @@
   (update :session dissoc :mobile)
   (update :session dissoc :email)))
 
+(defonce actions (atom {}))
+
 (defn login-page
   [request]
   (let [post? (= :post (:request-method request))
-        {:keys [email mobile]} (:form-params request)
-        id {:email email :mobile mobile}
+        id (select-keys (:form-params request) [:email :mobile])
         user (first (filter #(= id (select-keys % [:email :mobile])) config/users))]
    (if (and user post?)
-    (-> (ring-resp/redirect "/apps")
-        (update :session merge id))
+    (let [k (str (java.util.UUID/randomUUID))]
+     (swap! actions assoc k {::payload {:email-address-confirmed? true}
+                             ::session-id (-> request :cookies (get "ring-session") :value)
+                             ::expiry (Date/from (.plusSeconds (Instant/now) 60000))})
+     (email/send-message! {:message {:body {:text (str (new java.net.URI "https" nil (::config/hostname config/params) (::config/ssl-port config/params) "/actions" (str "token=" k) nil))}}})
+     (-> (ring-resp/redirect "/pending")
+         (update :session assoc ::user user)))
     (-> (ring-resp/response [{:tag "form"
                               :attrs {:method "POST" :action "/login"}
                               :content [(template/input {:id "__anti-forgery-token"
@@ -49,7 +61,6 @@
                                                          :label "Email"})
                                         (template/input {:id "mobile"
                                                          :type "text"
-                                                         :autofocus true
                                                          :label "Mobile"})
                                         (template/input {:id "submit"
                                                          :type "submit"
@@ -57,6 +68,56 @@
                                                          :value "Sign in"})]}])
      (update :body (partial template/html (assoc-in request [:flash :error] (when (and post? (nil? user)) "User not found."))))
      (update :body xml/emit-str)))))
+
+(def in-the-future?
+ #(if (instance? Instant %)
+   (.before (new Date) (Date/from %))
+   (.before (new Date) %)))
+
+(defn actions-page
+ [request]
+ (let [token (or (-> request :query-params :token) (-> request :form-params :token))]
+  (if-let [action (@actions token)]
+   (let [{::keys [payload session-id expiry]} action]
+    (if (and (= :post (:request-method request))
+             payload session-id expiry
+             (in-the-future? expiry))
+     (do
+      (swap! state update session-id merge payload)
+      (-> (ring-resp/response [{:tag "form"
+                                :attrs {:method "GET" :action "/apps"}
+                                :content [(template/input {:id "submit"
+                                                           :type "submit"
+                                                           :classes ["btn" "btn-primary"]
+                                                           :value "Continue to apps"})]}])
+       (update :body (partial template/html request))
+       (update :body xml/emit-str)))
+     (-> (ring-resp/response [{:tag "form"
+                               :attrs {:method "POST" :action "/actions"}
+                               :content [(template/input {:id "__anti-forgery-token"
+                                                          :type "hidden"
+                                                          :value (csrf/anti-forgery-token request)})
+                                         (template/input {:id "token"
+                                                          :type "hidden"
+                                                          :value token})
+                                         (template/input {:id "submit"
+                                                          :type "submit"
+                                                          :classes ["btn" "btn-success"]
+                                                          :value "Confirm email address"})]}])
+      (update :body (partial template/html request))
+      (update :body xml/emit-str))))
+   (-> (ring-resp/response [{:tag "p" :content ["missing or invalid token"]}])
+    (update :body (partial template/html request))
+    (update :body xml/emit-str)))))
+
+(defn pending-page
+ [request]
+ (let [email (-> request :session ::user :email)
+       msg1 ["There should a new email message in the inbox for " {:tag "span" :content [email]}]
+       msg2 ["Please click the link in the message to confirm your account."]]
+  (-> (ring-resp/response [{:tag "p" :content msg1} {:tag "p" :content msg2}])
+   (update :body (partial template/html request))
+   (update :body xml/emit-str))))
 
 (defn make-saml-handler [config]
  (with-meta
@@ -82,7 +143,7 @@
 (defn app-page
  [request]
  (let [app-id (:app-id (:path-params request))
-       email (-> request :session :email)]
+       email (-> request :session ::user :email)]
   (assert (and app-id email))
   (-> ((get saml-apps app-id) email)
    (update :body (partial template/html request))
@@ -104,15 +165,31 @@
  [request]
  (ring-resp/redirect "/login"))
 
-(defonce session-store (memory/memory-store))
+; (def auth-flow
+;  {:name ::auth-flow
+;   :enter (fn [ctx]
+;           (condp set/subset? (set (keys (:session (:request ctx))))
+;            #{::user :email-address-confirmed?}
+;            (if (= "/app" (-> ctx :request :path-info)) ctx
+;             (assoc ctx :response (ring-resp/redirect "/apps")))
+;            #{::user}
+;            (if (= "/pending" (-> ctx :request :path-info)) ctx
+;             (assoc ctx :response (ring-resp/redirect "/pending")))
+;            #{}
+;            (if (= "/login" (-> ctx :request :path-info)) ctx
+;             (-> ctx
+;              (assoc-in [:response] (ring-resp/redirect "/login"))
+;              (assoc-in [:response :flash :error] error-message)))))})
 
 (def common-interceptors
  ^:interceptors
  [(body-params/body-params)
-  (middlewares/session {:store session-store})
+  (middlewares/session {:store (memory/memory-store state)})
   (middlewares/flash)
   (csrf/anti-forgery)
-  http/html-body])
+  http/html-body
+  ; auth-flow
+])
 
 (defn apex-redirects
  [request]
@@ -139,15 +216,25 @@
              (assoc-in [:response] (ring-resp/redirect "/login"))
              (assoc-in [:response :flash :error] error-message)))))})
 
+; (defn debug-page
+;  [request]
+;  (do (def asdf request)
+;   {:status 200
+;    :headers {"Content-Type" "text/plain"}
+;    :body (str (with-out-str (pprint request)) \newline)}))
+
 (def routes
  (route/expand-routes
   [[:catch-all ["/" {:get `apex-redirects}]]
    [:net-authfed :https (::config/hostname config/params)
     ["/" common-interceptors {:get `home-page}]
+    ; ["/debug" common-interceptors {:any `debug-page}]
     ["/login" common-interceptors {:any `login-page}]
+    ["/actions" common-interceptors {:any `actions-page}]
+    ["/pending" common-interceptors {:any `pending-page}]
     ["/logout" common-interceptors {:any `logout-page}]
-    ["/apps" (conj common-interceptors (check [:email :mobile])) common-interceptors {:get `apps-page}]
-    ["/apps/:app-id" (conj common-interceptors (check [:email :mobile])) {:get `app-page}]]]))
+    ["/apps" common-interceptors {:get `apps-page}]
+    ["/apps/:app-id" common-interceptors {:get `app-page}]]]))
 
 (def keystore-password (apply str less.awful.ssl/key-store-password))
 (def keystore-instance

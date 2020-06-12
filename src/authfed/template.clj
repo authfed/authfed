@@ -1,5 +1,6 @@
 (ns authfed.template
- (:require [clojure.string :as string]))
+ (:require [clojure.string :as string]
+           [clojure.pprint :as pprint]))
 
 (def title
  {:tag "title" :content "Authfed"})
@@ -29,7 +30,7 @@
 
 (defn nav [request]
  (let [uri (:uri request)
-       logged-in? (contains? (:session request) :email)]
+       logged-in? (contains? (:session request) ::user)]
   {:tag :div :attrs {:class "container" :style "margin-top: 20px;"}
    :content [{:tag :ul :attrs {:class "nav nav-pills"}
               :content
@@ -51,7 +52,8 @@
    :content [{:tag "head"
               :content [title meta-charset meta-width stylesheet font-stylesheet]}
              {:tag "body"
-              :content [(nav request)
+              :content [{:tag "pre" :attrs {:style "width:100%;"} :content [(with-out-str (pprint/pprint (:session request)))]}
+                        (nav request)
                         {:tag "div"
                          :attrs {:class "container"
                                  :style "margin-top: 40px;"}
