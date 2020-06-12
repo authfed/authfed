@@ -3,25 +3,21 @@
  (:require [clojure.edn :as edn]
            [clojure.data.json :as json]))
 
-(defn- or-dummy
- [prod dev]
- (let [f (new File prod)]
-  (try (.getPath (doto f slurp))
-   (catch FileNotFoundException e dev))))
-
-(defmacro load-config
+(defn- load-config
  "Load from /etc/authfed if possible or config/ as a fallback."
  [s]
- `(def ~(symbol s) ; [(str "/etc/authfed/" ~s ".edn") (str "config/" ~s ".edn")]))
-   (let [f# (or-dummy (str "/etc/authfed/" ~s ".edn") (str "config/" ~s ".edn"))]
-    (with-open [fr# (new PushbackReader (new FileReader f#))]
-     (edn/read fr#)))))
+ (let [prod (str "/etc/authfed/" s)
+       dev  (str "config/" s)
+       path (try (.getPath (doto (new File prod) slurp))
+             (catch FileNotFoundException _ dev))]
+  (with-open [fr (new PushbackReader (new FileReader path))]
+   (edn/read fr))))
 
-(load-config "users")
-(load-config "targets")
-(load-config "saml")
-(load-config "sms")
-(load-config "email")
+(def users (load-config "users.edn"))
+(def targets (load-config "targets.edn"))
+(def saml (load-config "saml.edn"))
+(def sms (load-config "sms.edn"))
+(def email (load-config "email.edn"))
 
 (def mac? (-> (System/getProperty "os.name") .toLowerCase (.startsWith "mac")))
 
