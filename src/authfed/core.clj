@@ -72,7 +72,8 @@
      (swap! pending assoc session-id {::validator #(ot/is-valid-totp-token? % secret)
                                       ::k formkey ::v formval})
      (case formkey
-      :email (email/send-message! {:message {:body {:text (str "Code is " n)}}
+      :email (email/send-message! {:message {:subject "Six-digit code for login"
+                                             :body {:text (str "Code is " n)}}
                                    :destination {:to-addresses [formval]}})
       :mobile (sms/send-message! {:message (str "Code is " n) :to formval}))
      (-> (ring-resp/response [{:tag "form"
