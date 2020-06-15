@@ -28,138 +28,80 @@
             [ring.util.response :as ring-resp]))
 
 (defn logged-in? [session]
- (and (contains? session ::email)
-      (contains? session ::email)))
-
-(defn get-email [session]
- (-> session ::email))
-
-(defn get-mobile [session]
- (-> session ::mobile))
+ (and (contains? session :email)
+      (contains? session :mobile)))
 
 (defonce state (atom {}))
 
-(defn login-page
- [request]
- (-> (ring-resp/redirect "/email")))
-
 (defn logout-page
  [request]
- (-> (ring-resp/redirect "/email")
+ (-> (ring-resp/redirect "/login")
   (assoc :session {})))
 
-(defonce challenges (atom {}))
+(defonce pending (atom {}))
 
-(def in-the-future?
- #(if (instance? Instant %)
-   (.before (new Date) (Date/from %))
-   (.before (new Date) %)))
-
-(defn email-page
+(defn login-page
   [request]
-  (let [post? (= :post (:request-method request))
-        email (-> request :form-params :email)
-        users (into {} (map (juxt :email identity) config/users))
-        user (get users email)]
-   (if post?
-    (let [k (str (java.util.UUID/randomUUID))]
-     (when user
-      (swap! challenges assoc k {::payload {::email email}
-                                 ::session-id (-> request :cookies (get "ring-session") :value)
-                                 ::validator (partial = k)
-                                 ::expiry (Date/from (.plusSeconds (Instant/now) 60000))})
-      (email/send-message! {:message {:body {:text (str (new java.net.URI "https" nil (::config/hostname config/params) (::config/ssl-port config/params) "/challenge" (str "token=" k) nil))}}}))
-     (ring-resp/redirect "/pending"))
-    (-> (ring-resp/response [{:tag "form"
-                              :attrs {:method "POST" :action "/email"}
-                              :content [(template/input {:id "__anti-forgery-token"
-                                                         :type "hidden"
-                                                         :value (csrf/anti-forgery-token request)})
-                                        (template/input {:id "email"
-                                                         :type "text"
-                                                         :autofocus true
-                                                         :label "Email"})
-                                        (template/input {:id "submit"
-                                                         :type "submit"
-                                                         :classes ["btn" "btn-primary"]
-                                                         :value "Sign in with email"})]}])
-     (update :body (partial template/html request))
-     (update :body xml/emit-str)))))
+  (let [post-request? (= :post (:request-method request))
+        session-id (-> request :cookies (get "ring-session") :value)
+        {:keys [code] :as params} (-> request :form-params)
+        formkey    (first (filter #{:email :mobile} (keys params)))
+        formval    (get params formkey)]
+   (cond
 
-(defn mobile-page
-  [request]
-  (let [post? (= :post (:request-method request))
-        mobile (-> request :form-params :mobile)
-        users (into {} (map (juxt :mobile identity) config/users))
-        user (get users mobile)]
-   (if post?
-    (let [k (str (java.util.UUID/randomUUID))
-          secret (ot/generate-secret-key)]
-     (when user
-      (swap! challenges assoc k {::payload {::mobile mobile}
-                                 ::session-id (-> request :cookies (get "ring-session") :value)
-                                 ::validator #(ot/is-valid-totp-token? % secret)
-                                 ::expiry (Date/from (.plusSeconds (Instant/now) 60))})
-      (sms/send-message! {:message (str "Code for login is " (ot/get-totp-token secret)) :to mobile}))
-     (ring-resp/redirect "/challenge?mobile=true"))
-    (-> (ring-resp/response [{:tag "form"
-                              :attrs {:method "POST" :action "/mobile"}
-                              :content [(template/input {:id "__anti-forgery-token"
-                                                         :type "hidden"
-                                                         :value (csrf/anti-forgery-token request)})
-                                        (template/input {:id "mobile"
-                                                         :type "text"
-                                                         :autofocus true
-                                                         :label "Mobile"})
-                                        (template/input {:id "submit"
-                                                         :type "submit"
-                                                         :classes ["btn" "btn-primary"]
-                                                         :value "Send challenge code"})]}])
-     (update :body (partial template/html request))
-     (update :body xml/emit-str)))))
+    (and post-request? code)
+    (let [six-digits (try (new Integer code) (catch NumberFormatException _ nil))
+          {::keys [validator k v]} (get @pending session-id)]
+     (if (validator six-digits)
+      (do
+        (swap! state update session-id assoc k v)
+        (ring-resp/redirect "/login"))
+      (-> (ring-resp/redirect "/login")
+       (update :flash assoc :error "Incorrect code."))))
 
-(defn challenge-page
- [request]
- (let [token (or (-> request :query-params :token) (-> request :form-params :token))]
-  (if-let [challenge (@challenges token)]
-   (let [{::keys [payload session-id expiry]} challenge]
-    (if (and (= :post (:request-method request))
-             payload session-id expiry
-             (in-the-future? expiry))
-     (do
-      (swap! state update session-id merge payload)
-      (-> (ring-resp/response [{:tag "a" :attrs {:href "/mobile"
-                                                 :class "btn btn-primary"
-                                                 :style "width:100%;"}
-                                :content ["Continue to apps"]}])
-       (update :body (partial template/html request))
-       (update :body xml/emit-str)))
+    (and post-request? formkey)
+    (let [secret (ot/generate-secret-key)
+          n (ot/get-totp-token secret)]
+     (swap! pending assoc session-id {::validator #(ot/is-valid-totp-token? % secret)
+                                      ::k formkey ::v formval})
+     (email/send-message! {:message {:body {:text (str "Code is " n)}}})
      (-> (ring-resp/response [{:tag "form"
-                               :attrs {:method "POST" :action "/challenge"}
+                               :attrs {:method "POST" :action "/login"}
                                :content [(template/input {:id "__anti-forgery-token"
                                                           :type "hidden"
                                                           :value (csrf/anti-forgery-token request)})
-                                         (template/input {:id "token"
-                                                          :type "hidden"
-                                                          :value token})
+                                         (template/input {:id "code"
+                                                          :type "text"
+                                                          :autofocus true
+                                                          :label "Code"})
                                          (template/input {:id "submit"
                                                           :type "submit"
-                                                          :classes ["btn" "btn-success"]
-                                                          :value "Confirm email address"})]}])
+                                                          :classes ["btn" "btn-primary"]
+                                                          :value "Try six-digit code"})]}])
       (update :body (partial template/html request))
-      (update :body xml/emit-str))))
-   (-> (ring-resp/response [{:tag "p" :content ["missing or invalid token"]}])
-    (update :body (partial template/html request))
-    (update :body xml/emit-str)))))
+      (update :body xml/emit-str)))
 
-(defn pending-page
- [request]
- (let [email (-> request :session get-email)
-       msg1 ["There should a new email message in your inbox."]
-       msg2 ["Please click the link in the message to confirm your account."]]
-  (-> (ring-resp/response [{:tag "p" :content msg1} {:tag "p" :content msg2}])
-   (update :body (partial template/html request))
-   (update :body xml/emit-str))))
+    true ;; else
+    (-> (ring-resp/response [{:tag "form"
+                              :attrs {:method "POST" :action "/login"}
+                              :content [(template/input {:id "__anti-forgery-token"
+                                                         :type "hidden"
+                                                         :value (csrf/anti-forgery-token request)})
+                                        (if-not (-> request :session :email)
+                                         (template/input {:id "email"
+                                                          :type "text"
+                                                          :autofocus true
+                                                          :label "Email"})
+                                         (template/input {:id "mobile"
+                                                          :type "text"
+                                                          :autofocus true
+                                                          :label "Mobile"}))
+                                        (template/input {:id "submit"
+                                                         :type "submit"
+                                                         :classes ["btn" "btn-primary"]
+                                                         :value "Sign in"})]}])
+     (update :body (partial template/html request))
+     (update :body xml/emit-str)))))
 
 (defn make-saml-handler [config]
  (with-meta
@@ -211,10 +153,10 @@
 ;  {:name ::auth-flow
 ;   :enter (fn [ctx]
 ;           (condp set/subset? (set (keys (:session (:request ctx))))
-;            #{::email ::mobile}
+;            #{:email :mobile}
 ;            (if (= "/app" (-> ctx :request :path-info)) ctx
 ;             (assoc ctx :response (ring-resp/redirect "/apps")))
-;            #{::email}
+;            #{:email}
 ;            (if (= "/pending" (-> ctx :request :path-info)) ctx
 ;             (assoc ctx :response (ring-resp/redirect "/pending")))
 ;            #{}
@@ -258,24 +200,12 @@
              (assoc-in [:response] (ring-resp/redirect "/login"))
              (assoc-in [:response :flash :error] error-message)))))})
 
-; (defn debug-page
-;  [request]
-;  (do (def asdf request)
-;   {:status 200
-;    :headers {"Content-Type" "text/plain"}
-;    :body (str (with-out-str (pprint request)) \newline)}))
-
 (def routes
  (route/expand-routes
   [[:catch-all ["/" {:get `apex-redirects}]]
    [:net-authfed :https (::config/hostname config/params)
     ["/" common-interceptors {:get `home-page}]
-    ; ["/debug" common-interceptors {:any `debug-page}]
     ["/login" common-interceptors {:any `login-page}]
-    ["/email" common-interceptors {:any `email-page}]
-    ["/mobile" common-interceptors {:any `mobile-page}]
-    ["/challenge" common-interceptors {:any `challenge-page}]
-    ["/pending" common-interceptors {:any `pending-page}]
     ["/logout" common-interceptors {:any `logout-page}]
     ["/apps" common-interceptors {:get `apps-page}]
     ["/apps/:app-id" common-interceptors {:get `app-page}]]]))
