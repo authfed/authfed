@@ -71,7 +71,10 @@
           n (ot/get-totp-token secret)]
      (swap! pending assoc session-id {::validator #(ot/is-valid-totp-token? % secret)
                                       ::k formkey ::v formval})
-     (email/send-message! {:message {:body {:text (str "Code is " n)}}})
+     (case formkey
+      :email (email/send-message! {:message {:body {:text (str "Code is " n)}}
+                                   :destination {:to-addresses [formval]}})
+      :mobile (sms/send-message! {:message (str "Code is " n) :to formval}))
      (-> (ring-resp/response [{:tag "form"
                                :attrs {:method "POST" :action "/login"}
                                :content [(template/input {:id "__anti-forgery-token"
