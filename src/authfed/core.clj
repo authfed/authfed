@@ -123,7 +123,7 @@
 (defn app-page
  [request]
  (let [app-id (-> request :path-params :app-id)
-       email (-> request :session get-email)]
+       email (-> request :session :email)]
   (assert (and app-id email))
   (-> ((get saml-apps app-id) email)
    (update :body (partial template/html request))
@@ -131,7 +131,7 @@
 
 (defn apps-page
  [request]
- (let [email (-> request :session get-email)]
+ (let [email (-> request :session :email)]
   (-> (ring-resp/response
        [{:tag "ul"
          :content (for [k (keys saml-apps)]
