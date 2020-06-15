@@ -27,29 +27,40 @@
             [ring.util.codec :as codec]
             [ring.util.response :as ring-resp]))
 
+(defn logged-in? [session]
+ (and (contains? session ::email)
+      (contains? session ::email)))
+
+(defn get-email [session]
+ (-> session ::email))
+
+(defn get-mobile [session]
+ (-> session ::mobile))
+
 (defonce state (atom {}))
 
 (defn logout-page
  [request]
  (-> (ring-resp/redirect "/login")
-  (update :session dissoc :mobile)
-  (update :session dissoc :email)))
+  (assoc :session {})))
 
 (defonce actions (atom {}))
 
 (defn login-page
   [request]
   (let [post? (= :post (:request-method request))
-        id (select-keys (:form-params request) [:email :mobile])
-        user (first (filter #(= id (select-keys % [:email :mobile])) config/users))]
+        {:keys [email mobile] :as id} (select-keys (:form-params request) [:email :mobile])
+        user (->> config/users
+                  (map #(select-keys % [:email :mobile]))
+                  (filter (partial = id))
+                  first)]
    (if (and user post?)
     (let [k (str (java.util.UUID/randomUUID))]
-     (swap! actions assoc k {::payload {:email-address-confirmed? true}
+     (swap! actions assoc k {::payload {::email email}
                              ::session-id (-> request :cookies (get "ring-session") :value)
                              ::expiry (Date/from (.plusSeconds (Instant/now) 60000))})
      (email/send-message! {:message {:body {:text (str (new java.net.URI "https" nil (::config/hostname config/params) (::config/ssl-port config/params) "/actions" (str "token=" k) nil))}}})
-     (-> (ring-resp/redirect "/pending")
-         (update :session assoc ::user user)))
+     (ring-resp/redirect "/pending"))
     (-> (ring-resp/response [{:tag "form"
                               :attrs {:method "POST" :action "/login"}
                               :content [(template/input {:id "__anti-forgery-token"
@@ -112,8 +123,8 @@
 
 (defn pending-page
  [request]
- (let [email (-> request :session ::user :email)
-       msg1 ["There should a new email message in the inbox for " {:tag "span" :content [email]}]
+ (let [email (-> request :session get-email)
+       msg1 ["There should a new email message in your inbox."]
        msg2 ["Please click the link in the message to confirm your account."]]
   (-> (ring-resp/response [{:tag "p" :content msg1} {:tag "p" :content msg2}])
    (update :body (partial template/html request))
@@ -142,8 +153,8 @@
 
 (defn app-page
  [request]
- (let [app-id (:app-id (:path-params request))
-       email (-> request :session ::user :email)]
+ (let [app-id (-> request :path-params :app-id)
+       email (-> request :session get-email)]
   (assert (and app-id email))
   (-> ((get saml-apps app-id) email)
    (update :body (partial template/html request))
@@ -151,7 +162,7 @@
 
 (defn apps-page
  [request]
- (let [email (-> request :session :email)]
+ (let [email (-> request :session get-email)]
   (-> (ring-resp/response
        [{:tag "ul"
          :content (for [k (keys saml-apps)]
@@ -169,10 +180,10 @@
 ;  {:name ::auth-flow
 ;   :enter (fn [ctx]
 ;           (condp set/subset? (set (keys (:session (:request ctx))))
-;            #{::user :email-address-confirmed?}
+;            #{::email ::mobile}
 ;            (if (= "/app" (-> ctx :request :path-info)) ctx
 ;             (assoc ctx :response (ring-resp/redirect "/apps")))
-;            #{::user}
+;            #{::email}
 ;            (if (= "/pending" (-> ctx :request :path-info)) ctx
 ;             (assoc ctx :response (ring-resp/redirect "/pending")))
 ;            #{}
