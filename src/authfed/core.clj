@@ -27,10 +27,6 @@
             [ring.util.codec :as codec]
             [ring.util.response :as ring-resp]))
 
-(defn logged-in? [session]
- (and (contains? session :email)
-      (contains? session :mobile)))
-
 (defonce state (atom {}))
 
 (defn logout-page
