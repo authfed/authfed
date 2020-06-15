@@ -21,12 +21,19 @@
           :crossorigin "anonymous"}})
 
 (defn flash-message [request]
- (when-let [error (:error (:flash request))]
-  {:tag :div :attrs {:class "alert alert-danger alert-dismissible"}
-   :content [{:tag :button :attrs {:type "button" :class "close"
-                                   :onclick "this.parentElement.remove();"}
-              :content ["×"]}
-             error]}))
+ {:tag "div"
+  :content (vector (when-let [error (:error (:flash request))]
+                    {:tag :div :attrs {:class "alert alert-danger alert-dismissible"}
+                     :content [{:tag :button :attrs {:type "button" :class "close"
+                                                     :onclick "this.parentElement.remove();"}
+                                :content ["×"]}
+                               error]})
+                   (when-let [info (:info (:flash request))]
+                    {:tag :div :attrs {:class "alert alert-success alert-dismissible"}
+                     :content [{:tag :button :attrs {:type "button" :class "close"
+                                                     :onclick "this.parentElement.remove();"}
+                                :content ["×"]}
+                               info]}))})
 
 (defn nav [request]
  (let [uri (:uri request)
