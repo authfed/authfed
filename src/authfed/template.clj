@@ -60,7 +60,7 @@
    :content [{:tag "head"
               :content [title meta-charset meta-width stylesheet font-stylesheet]}
              {:tag "body"
-              :content [{:tag "pre" :attrs {:style "width:100%;"} :content [(with-out-str (pprint/pprint (:session request)))]}
+              :content [ ;; {:tag "pre" :attrs {:style "width:100%;"} :content [(with-out-str (pprint/pprint (:session request)))]}
                         (nav request)
                         {:tag "div"
                          :attrs {:class "container"
