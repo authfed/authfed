@@ -39,16 +39,17 @@
 (defn login-page
   [request]
   (let [post-request? (= :post (:request-method request))
+        session (:session request)
         session-id (-> request :cookies (get "ring-session") :value)
         {:keys [code] :as params} (-> request :form-params)
         formkey    (first (filter #{:email :mobile} (keys params)))
         formval    (get params formkey)]
    (cond
 
-    (and (contains? (:session request) :email)
-         (contains? (:session request) :mobile))
+    (and (contains? session :email)
+         (contains? session :mobile))
     (let [users (into {} (map (juxt #(hash-map :email (:email %) :mobile (:mobile %)) identity) config/users))]
-     (if-let [user (get users (select-keys (:session request) [:email :mobile]))]
+     (if-let [user (get users (select-keys session [:email :mobile]))]
       (-> (ring-resp/redirect "/apps")
           (update :flash assoc :info "Welcome!"))
       (-> (ring-resp/redirect "/login")
@@ -59,9 +60,9 @@
     (let [six-digits (try (new Integer code) (catch NumberFormatException _ nil))
           {::keys [validator k v]} (get @pending session-id)]
      (if (validator six-digits)
-      (do
-        (swap! state update session-id assoc k v)
-        (ring-resp/redirect "/login"))
+      (-> (ring-resp/redirect "/login")
+       (assoc :session (assoc session k v))
+       (update :flash assoc :info "Correct! Now your mobile number as well please."))
       (-> (ring-resp/redirect "/login")
        (update :flash assoc :error "Incorrect code."))))
 
@@ -98,7 +99,7 @@
                               :content [(template/input {:id "__anti-forgery-token"
                                                          :type "hidden"
                                                          :value (csrf/anti-forgery-token request)})
-                                        (if-not (-> request :session :email)
+                                        (if-not (contains? session :email)
                                          (template/input {:id "email"
                                                           :type "text"
                                                           :autofocus true
