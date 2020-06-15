@@ -71,11 +71,11 @@
                                  :class "input-group-text"}
                          :content [label]}]}
              {:tag "input"
-              :attrs (merge (select-keys params [:id :type :value :autofocus])
+              :attrs (merge (select-keys params [:id :type :value :autofocus :disabled])
                             {:name id}
                             {:class (string/join " " (conj classes "form-control"))})}]}
   {:tag "div" :attrs {:class "input-group mb-3"}
    :content [{:tag "input"
-              :attrs (merge (select-keys params [:id :type :value :autofocus])
+              :attrs (merge (select-keys params [:id :type :value :autofocus :disabled])
                             {:name id}
                             {:class (string/join " " (conj classes "form-control"))})}]}))

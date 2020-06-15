@@ -45,6 +45,16 @@
         formval    (get params formkey)]
    (cond
 
+    (and (contains? (:session request) :email)
+         (contains? (:session request) :mobile))
+    (let [users (into {} (map (juxt #(hash-map :email (:email %) :mobile (:mobile %)) identity) config/users))]
+     (if-let [user (get users (select-keys (:session request) [:email :mobile]))]
+      (-> (ring-resp/redirect "/apps")
+          (update :flash assoc :info "Welcome!"))
+      (-> (ring-resp/redirect "/login")
+          (assoc :session {})
+          (update :flash assoc :error "User not found. Access denied."))))
+
     (and post-request? code)
     (let [six-digits (try (new Integer code) (catch NumberFormatException _ nil))
           {::keys [validator k v]} (get @pending session-id)]
@@ -66,6 +76,11 @@
                                :content [(template/input {:id "__anti-forgery-token"
                                                           :type "hidden"
                                                           :value (csrf/anti-forgery-token request)})
+                                         (template/input {:id (name formkey)
+                                                          :type "text"
+                                                          :disabled true
+                                                          :value formval
+                                                          :label ({:email "Email" :mobile "Mobile"} formkey)})
                                          (template/input {:id "code"
                                                           :type "text"
                                                           :autofocus true
