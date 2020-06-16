@@ -29,6 +29,31 @@
 
 (defonce state (atom {}))
 
+(def in-the-future?
+ #(if (instance? Instant %)
+   (.before (new Date) (Date/from %))
+   (.before (new Date) %)))
+
+(def parse-int
+ #(try (new Integer %) (catch NumberFormatException _ nil)))
+
+(defn make-sms-challenge [payload]
+ (let [secret (ot/generate-secret-key)
+       code (delay (ot/get-totp-token secret))]
+  {::send! #(sms/send-message! {:to % :message (str "Code is " @code)})
+   ::validator #(when-let [n (parse-int %)]
+                 (when (or (ot/is-valid-totp-token? n secret)
+                           (ot/is-valid-totp-token? n secret {:date (Date/from (.plusSeconds (Instant/now) 30))}))
+                  payload))}))
+
+(defn make-email-challenge [payload]
+ (let [token (str (java.util.UUID/randomUUID))
+       expiry (.plusSeconds (Instant/now) 3600)]
+  {::send! #(email/send-message! {:destination {:to-addresses [%]}
+                                  :message {:subject "Magic link for login"
+                                            :body {:text (str "https://localhost:8443/challenge?token=" token)}}})
+   ::validator #(when (and (= token %) (in-the-future? expiry)) payload)}))
+
 (defn logout-page
  [request]
  (-> (ring-resp/redirect "/login")
