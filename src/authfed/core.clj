@@ -54,11 +54,6 @@
                                             :body {:text (str "https://localhost:8443/challenge?token=" token)}}})
    ::validator #(when (and (= token %) (in-the-future? expiry)) payload)}))
 
-(defn logout-page
- [request]
- (-> (ring-resp/redirect "/login")
-  (assoc :session {})))
-
 (defonce pending (atom {}))
 
 (defn login-page
@@ -189,6 +184,11 @@
 (defn home-page
  [request]
  (ring-resp/redirect "/login"))
+
+(defn logout-page
+ [request]
+ (-> (ring-resp/redirect "/login")
+  (assoc :session {})))
 
 ; (def auth-flow
 ;  {:name ::auth-flow
