@@ -113,6 +113,10 @@
 
 (def label {:email "Email" :mobile "Mobile"})
 
+(defn p [& xs] {:tag "p" :content xs})
+(defn strong [& xs] {:tag "strong" :content xs})
+(defn i [& xs] {:tag "i" :content xs})
+
 (defn challenge-page
   [request]
   (let [post-request? (= :post (:request-method request))
@@ -137,32 +141,63 @@
          (update :body (partial template/html (update request :flash assoc :error "Problem with token.")))
          (update :body xml/emit-str)))
 
-    true ;; else
-    (-> [{:tag "form"
+    (= k :email)
+    (if-let [token (-> request :query-params :token)]
+     (-> [(p "Would you link to approve the request to sign-in?")
+          {:tag "form"
+           :attrs {:method "POST"}
+           :content [(template/input {:id "__anti-forgery-token"
+                                      :type "hidden"
+                                      :value (csrf/anti-forgery-token request)})
+                     (template/input {:id (name k)
+                                      :type "text"
+                                      :value v
+                                      :disabled true
+                                      :label (label k)})
+                     (template/input {:id "token"
+                                      :type "hidden"
+                                      :value token})
+                     (template/input {:id "submit"
+                                      :type "submit"
+                                      :classes ["btn" "btn-primary"]
+                                      :value "Yes, approve sign-in"})]}]
+      (ring-resp/response)
+      (update :body (partial template/html request))
+      (update :body xml/emit-str))
+     (-> [(p "An email has been sent to " (i v) ".")
+          (p "Please click the link in that email to continue to the next challenge.")
+          {:tag "form"
+           :attrs {:method "POST"}
+           :content [(template/input {:id "__anti-forgery-token"
+                                      :type "hidden"
+                                      :value (csrf/anti-forgery-token request)})
+                     (template/input {:id "submit"
+                                      :type "submit"
+                                      :classes ["btn" "btn-primary"]
+                                      :value "Ok, done"})]}]
+      (ring-resp/response)
+      (update :body (partial template/html request))
+      (update :body xml/emit-str)))
+
+    (= k :mobile)
+    (-> [(p "A six-digit code has been sent to " (i v) ".")
+         (p "Please type that code the box below to continue the sign-in process.")
+         {:tag "form"
           :attrs {:method "POST"}
           :content [(template/input {:id "__anti-forgery-token"
                                      :type "hidden"
                                      :value (csrf/anti-forgery-token request)})
-                    (template/input {:id (name k)
+                    (template/input {:id "token"
                                      :type "text"
-                                     :value v
-                                     :disabled true
-                                     :label (label k)})
-                    (if-let [token (-> request :query-params :token)]
-                     (template/input {:id "token"
-                                      :type "hidden"
-                                      :value token})
-                     (template/input {:id "token"
-                                      :type "text"
-                                      :autofocus true
-                                      :label "Token"}))
+                                     :label "Code"})
                     (template/input {:id "submit"
                                      :type "submit"
                                      :classes ["btn" "btn-primary"]
-                                     :value "Confirm challenge"})]}]
+                                     :value "Confirm code"})]}]
      (ring-resp/response)
      (update :body (partial template/html request))
      (update :body xml/emit-str))
+
     true
     (ring-resp/response "hello world\n"))))
 
