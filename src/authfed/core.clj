@@ -111,20 +111,26 @@
    (-> (ring-resp/redirect "/apps")
        (update :flash assoc :info "Welcome! You are now logged in.")))))
 
+(def label {:email "Email" :mobile "Mobile"})
+
 (defn challenge-page
   [request]
   (let [post-request? (= :post (:request-method request))
-        challenge-id (or (-> request :path-params :id) (-> request :form-params :id))
+        challenge-id (-> request :path-params :id)
         challenge (->> @challenges (filter #(= (::id %) challenge-id)) first)
+        {::keys [validator session k v]} challenge
         token (-> request :form-params :token)]
    (assert challenge-id)
    (cond
+
+    (nil? challenge)
+    (ring-resp/not-found "not found\n")
 
     post-request?
     (if ((::validator challenge) token)
      (do
       (swap! challenges disj challenge)
-      (swap! sessions update (::session challenge) assoc (::k challenge) (::v challenge))
+      (swap! sessions update session assoc k v)
       (ring-resp/redirect "/next-challenge"))
      (-> ["empty payload"]
          (ring-resp/response)
@@ -137,16 +143,11 @@
           :content [(template/input {:id "__anti-forgery-token"
                                      :type "hidden"
                                      :value (csrf/anti-forgery-token request)})
-                    (template/input {:id "id"
-                                     :type "hidden"
-                                     :value challenge-id})
-                    (let [label {:email "Email" :mobile "Mobile"}]
-                     (for [{::keys [k v]} challenge]
-                      (template/input {:id (name k)
-                                       :type "text"
-                                       :value v
-                                       :disabled true
-                                       :label (label k)})))
+                    (template/input {:id (name k)
+                                     :type "text"
+                                     :value v
+                                     :disabled true
+                                     :label (label k)})
                     (if-let [token (-> request :query-params :token)]
                      (template/input {:id "token"
                                       :type "hidden"
@@ -164,8 +165,6 @@
      (update :body xml/emit-str))
     true
     (ring-resp/response "hello world\n"))))
-
-(def label {:email "Email" :mobile "Mobile"})
 
 (defn challenges-page
  [request]
