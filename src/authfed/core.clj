@@ -100,9 +100,7 @@
                                      :value "Start sign-in process"})]}]
      (ring-resp/response)
      (update :body (partial template/html request))
-     (update :body xml/emit-str))
-    true
-    (ring-resp/response "hello world\n"))))
+     (update :body xml/emit-str)))))
 
 (defn next-challenge-page
  [request]
