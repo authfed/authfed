@@ -59,8 +59,8 @@
    ::v v
    ::token token
    ::send! #(email/send-message! {:destination {:to-addresses [%]}
-                                  :message {:subject "Magic link for login"
-                                            :body {:text (str "https://localhost:8443/challenge/" id "?token=" token)}}})
+                                  :message {:subject "Confirmation token for sign-in"
+                                            :body {:text token :html token}}})
    ::validator #(and (= token %) (in-the-future? expiry))}))
 
 (defonce sessions (atom {}))
@@ -106,7 +106,7 @@
 (defn next-challenge-page
  [request]
  (let [session-id (-> request :cookies (get "ring-session") :value)]
-  (if-let [challenge (->> @challenges (filter #(= (::session %) session-id)) first)]
+  (if-let [challenge (->> @challenges (filter #(= (::session %) session-id)) (sort-by ::k) first)]
    (ring-resp/redirect (str "/challenge/" (::id challenge)))
    (-> (ring-resp/redirect "/apps")
        (update :flash assoc :info "Welcome! You are now logged in.")))))
@@ -142,46 +142,8 @@
          (update :body xml/emit-str)))
 
     (= k :email)
-    (if-let [token (-> request :query-params :token)]
-     (-> [(p "Would you link to approve the request to sign-in?")
-          {:tag "form"
-           :attrs {:method "POST"}
-           :content [(template/input {:id "__anti-forgery-token"
-                                      :type "hidden"
-                                      :value (csrf/anti-forgery-token request)})
-                     (template/input {:id (name k)
-                                      :type "text"
-                                      :value v
-                                      :disabled true
-                                      :label (label k)})
-                     (template/input {:id "token"
-                                      :type "hidden"
-                                      :value token})
-                     (template/input {:id "submit"
-                                      :type "submit"
-                                      :classes ["btn" "btn-primary"]
-                                      :value "Yes, approve sign-in"})]}]
-      (ring-resp/response)
-      (update :body (partial template/html request))
-      (update :body xml/emit-str))
-     (-> [(p "An email has been sent to " (i v) ".")
-          (p "Please click the link in that email to continue to the next challenge.")
-          {:tag "form"
-           :attrs {:method "POST"}
-           :content [(template/input {:id "__anti-forgery-token"
-                                      :type "hidden"
-                                      :value (csrf/anti-forgery-token request)})
-                     (template/input {:id "submit"
-                                      :type "submit"
-                                      :classes ["btn" "btn-primary"]
-                                      :value "Ok, done"})]}]
-      (ring-resp/response)
-      (update :body (partial template/html request))
-      (update :body xml/emit-str)))
-
-    (= k :mobile)
-    (-> [(p "A six-digit code has been sent to " (i v) ".")
-         (p "Please type that code the box below to continue the sign-in process.")
+    (-> [(p "An email has been sent to " (i v) ".")
+         (p "Please copy and paste the confirmation token from that email to continue to the next challenge.")
          {:tag "form"
           :attrs {:method "POST"}
           :content [(template/input {:id "__anti-forgery-token"
@@ -189,6 +151,27 @@
                                      :value (csrf/anti-forgery-token request)})
                     (template/input {:id "token"
                                      :type "text"
+                                     :autofocus true
+                                     :label "Token"})
+                    (template/input {:id "submit"
+                                     :type "submit"
+                                     :classes ["btn" "btn-primary"]
+                                     :value "Ok, continue"})]}]
+     (ring-resp/response)
+     (update :body (partial template/html request))
+     (update :body xml/emit-str))
+
+    (= k :mobile)
+    (-> [(p "A six-digit code has been sent to " (i v) ".")
+         (p "Please type that code the box below to complete the sign-in process.")
+         {:tag "form"
+          :attrs {:method "POST"}
+          :content [(template/input {:id "__anti-forgery-token"
+                                     :type "hidden"
+                                     :value (csrf/anti-forgery-token request)})
+                    (template/input {:id "token"
+                                     :type "text"
+                                     :autofocus true
                                      :label "Code"})
                     (template/input {:id "submit"
                                      :type "submit"
