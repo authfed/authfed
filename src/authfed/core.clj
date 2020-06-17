@@ -79,8 +79,6 @@
     (do
      (let [ch1 (make-email-challenge {::session session-id ::k :email ::v email})
            ch2 (make-sms-challenge {::session session-id ::k :mobile ::v mobile})]
-      ((::send! ch1) email)
-      ((::send! ch2) mobile)
       (swap! challenges conj ch1 ch2)
       (ring-resp/redirect "/next-challenge")))
 
