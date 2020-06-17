@@ -27,6 +27,8 @@
             [ring.util.codec :as codec]
             [ring.util.response :as ring-resp]))
 
+(def label {:email "Email" :mobile "Mobile"})
+
 (def in-the-future?
  #(if (instance? Instant %)
    (.before (new Date) (Date/from %))
@@ -143,8 +145,6 @@
      (ring-resp/response)
      (update :body (partial template/html request))
      (update :body xml/emit-str)))))
-
-(def label {:email "Email" :mobile "Mobile"})
 
 (defn p [& xs] {:tag "p" :content xs})
 (defn strong [& xs] {:tag "strong" :content xs})
