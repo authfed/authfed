@@ -50,6 +50,21 @@
                {:tag :li :attrs {:class "nav-item"}
                 :content
                 [{:tag :a
+                  :attrs {:class (if (= "/start" uri) "nav-link active" "nav-link") :href "/start"}
+                  :content ["Start"]}]}
+               {:tag :li :attrs {:class "nav-item"}
+                :content
+                [{:tag :a
+                  :attrs {:class (if (= "/challenges" uri) "nav-link active" "nav-link") :href "/challenges"}
+                  :content ["Challenges"]}]}
+               {:tag :li :attrs {:class "nav-item"}
+                :content
+                [{:tag :a
+                  :attrs {:class (if (= "/next-challenge" uri) "nav-link active" "nav-link") :href "/next-challenge"}
+                  :content ["Next challenge"]}]}
+               {:tag :li :attrs {:class "nav-item"}
+                :content
+                [{:tag :a
                   :attrs {:class (if (#{"/logout" "/login"} uri) "nav-link active" "nav-link") :href (if logged-in? "/logout" "/login")}
                   :content [(if logged-in? "Logout" "Login")]}]}]}]}))
 
@@ -60,7 +75,7 @@
    :content [{:tag "head"
               :content [title meta-charset meta-width stylesheet font-stylesheet]}
              {:tag "body"
-              :content [ ;; {:tag "pre" :attrs {:style "width:100%;"} :content [(with-out-str (pprint/pprint (:session request)))]}
+              :content [{:tag "pre" :attrs {:style "width:100%;"} :content [(with-out-str (pprint/pprint (:session request)))]}
                         (nav request)
                         {:tag "div"
                          :attrs {:class "container"

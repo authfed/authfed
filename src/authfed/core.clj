@@ -27,8 +27,6 @@
             [ring.util.codec :as codec]
             [ring.util.response :as ring-resp]))
 
-(defonce state (atom {}))
-
 (def in-the-future?
  #(if (instance? Instant %)
    (.before (new Date) (Date/from %))
@@ -38,21 +36,168 @@
  #(try (new Integer %) (catch NumberFormatException _ nil)))
 
 (defn make-sms-challenge [payload]
- (let [secret (ot/generate-secret-key)
+ (let [id (str (java.util.UUID/randomUUID))
+       secret (ot/generate-secret-key)
        code (delay (ot/get-totp-token secret))]
-  {::send! #(sms/send-message! {:to % :message (str "Code is " @code)})
+  {::id id
+   ::secret secret
+   ::payload payload
+   ::send! #(sms/send-message! {:to % :message (str "Code is " @code)})
    ::validator #(when-let [n (parse-int %)]
                  (when (or (ot/is-valid-totp-token? n secret)
                            (ot/is-valid-totp-token? n secret {:date (Date/from (.plusSeconds (Instant/now) 30))}))
                   payload))}))
 
 (defn make-email-challenge [payload]
- (let [token (str (java.util.UUID/randomUUID))
+ (let [id (str (java.util.UUID/randomUUID))
+       token (str (java.util.UUID/randomUUID))
        expiry (.plusSeconds (Instant/now) 3600)]
-  {::send! #(email/send-message! {:destination {:to-addresses [%]}
+  {::id id
+   ::token token
+   ::payload payload
+   ::send! #(email/send-message! {:destination {:to-addresses [%]}
                                   :message {:subject "Magic link for login"
-                                            :body {:text (str "https://localhost:8443/challenge?token=" token)}}})
+                                            :body {:text (str "https://localhost:8443/challenge/" id "?token=" token)}}})
    ::validator #(when (and (= token %) (in-the-future? expiry)) payload)}))
+
+(defonce sessions (atom {}))
+(defonce database (atom {}))
+
+(defn start-page
+  [request]
+  (let [post-request? (= :post (:request-method request))
+        session-id (-> request :cookies (get "ring-session") :value)
+        {:keys [email mobile]} (-> request :form-params)]
+   (assert session-id)
+   (cond
+    post-request?
+    (do
+     (let [ch1 (make-email-challenge {:email email})
+           ch2 (make-sms-challenge {:mobile mobile})]
+      ((::send! ch1) email)
+      ((::send! ch2) mobile)
+      (swap! database assoc-in [session-id ::challenges (::id ch1)] ch1)
+      (swap! database assoc-in [session-id ::challenges (::id ch2)] ch2)
+      (ring-resp/redirect "/next-challenge")))
+
+    true
+    (-> [{:tag "form"
+          :attrs {:method "POST" :action "/start"}
+          :content [(template/input {:id "__anti-forgery-token"
+                                     :type "hidden"
+                                     :value (csrf/anti-forgery-token request)})
+                    (template/input {:id "email"
+                                     :type "text"
+                                     :autofocus true
+                                     :label "Email"})
+                    (template/input {:id "mobile"
+                                     :type "text"
+                                     :label "Mobile"})
+                    (template/input {:id "submit"
+                                     :type "submit"
+                                     :classes ["btn" "btn-primary"]
+                                     :value "Start sign-in process"})]}]
+     (ring-resp/response)
+     (update :body (partial template/html request))
+     (update :body xml/emit-str))
+    true
+    (ring-resp/response "hello world\n"))))
+
+(defn next-challenge-page
+ [request]
+ (let [session-id (-> request :cookies (get "ring-session") :value)]
+  (if-let [challenge (-> @database (get session-id) ::challenges vals first)]
+   (ring-resp/redirect (str "/challenge/" (::id challenge)))
+   (-> (ring-resp/redirect "/apps")
+       (update :flash assoc :info "Welcome! You are now logged in.")))))
+
+(defn challenge-page
+  [request]
+  (let [post-request? (= :post (:request-method request))
+        session (-> request :session)
+        session-id (-> request :cookies (get "ring-session") :value)
+        challenge-id (or (-> request :path-params :id) (-> request :form-params :id))
+        challenge (-> @database (get session-id) ::challenges (get challenge-id))
+        token (-> request :form-params :token)]
+   (assert (and session-id challenge-id))
+   (cond
+
+    post-request?
+    (if-let [payload ((::validator challenge) token)]
+     (do
+      (swap! database update-in [session-id ::challenges] dissoc challenge-id)
+      (-> (ring-resp/redirect "/next-challenge")
+          (assoc :session (merge session payload))))
+     (-> ["empty payload"]
+         (ring-resp/response)
+         (update :body (partial template/html (update request :flash assoc :error "Problem with token.")))
+         (update :body xml/emit-str)))
+
+    true ;; else
+    (-> [{:tag "form"
+          :attrs {:method "POST"}
+          :content [(template/input {:id "__anti-forgery-token"
+                                     :type "hidden"
+                                     :value (csrf/anti-forgery-token request)})
+                    (template/input {:id "id"
+                                     :type "hidden"
+                                     :value challenge-id})
+                    (let [label {:email "Email" :mobile "Mobile"}]
+                     (for [[k v] (::payload challenge)]
+                      (template/input {:id (name k)
+                                       :type "text"
+                                       :value v
+                                       :disabled true
+                                       :label (label k)})))
+                    (if-let [token (-> request :query-params :token)]
+                     (template/input {:id "token"
+                                      :type "hidden"
+                                      :value token})
+                     (template/input {:id "token"
+                                      :type "text"
+                                      :autofocus true
+                                      :label "Token"}))
+                    (template/input {:id "submit"
+                                     :type "submit"
+                                     :classes ["btn" "btn-primary"]
+                                     :value "Confirm challenge"})]}]
+     (ring-resp/response)
+     (update :body (partial template/html request))
+     (update :body xml/emit-str))
+    true
+    (ring-resp/response "hello world\n"))))
+
+(defn challenges-page
+ [request]
+ (let [session-id (-> request :cookies (get "ring-session") :value)
+       challenges (-> @database (get session-id) ::challenges vals)]
+  (-> (into []
+       (for [{::keys [id payload token secret]} challenges]
+        [{:tag "hr" :content [""]}
+         {:tag "a" :attrs {:href (str "/challenge/" id)} :content [(str "Challenge for: " payload)]}
+         {:tag "p" :content [(or token (ot/get-totp-token secret))]}
+         (for [[k v] payload]
+          (let [label {:email "Email" :mobile "Mobile"}]
+           (template/input {:id (name k)
+                            :type "text"
+                            :value v
+                            :disabled true
+                            :label (label k)})))
+         {:tag "form"
+          :attrs {:method "POST" :action (str "/challenge/" id)}
+          :content [(template/input {:id "__anti-forgery-token"
+                                     :type "hidden"
+                                     :value (csrf/anti-forgery-token request)})
+                    (template/input {:id "token"
+                                     :type "text"
+                                     :label "Token"})
+                    (template/input {:id "submit"
+                                     :type "submit"
+                                     :classes ["btn" "btn-primary"]
+                                     :value "Confirm challenge"})]}]))
+   (ring-resp/response)
+   (update :body (partial template/html request))
+   (update :body xml/emit-str))))
 
 (defonce pending (atom {}))
 
@@ -183,11 +328,11 @@
 
 (defn home-page
  [request]
- (ring-resp/redirect "/login"))
+ (ring-resp/redirect "/start"))
 
 (defn logout-page
  [request]
- (-> (ring-resp/redirect "/login")
+ (-> (ring-resp/redirect "/start")
   (assoc :session {})))
 
 ; (def auth-flow
@@ -209,7 +354,7 @@
 (def common-interceptors
  ^:interceptors
  [(body-params/body-params)
-  (middlewares/session {:store (memory/memory-store state)})
+  (middlewares/session {:store (memory/memory-store sessions)})
   (middlewares/flash)
   (csrf/anti-forgery)
   http/html-body
@@ -246,6 +391,10 @@
   [[:catch-all ["/" {:get `apex-redirects}]]
    [:net-authfed :https (::config/hostname config/params)
     ["/" common-interceptors {:get `home-page}]
+    ["/start" common-interceptors {:any `start-page}]
+    ["/challenges" common-interceptors {:any `challenges-page}]
+    ["/challenge/:id" common-interceptors {:any `challenge-page}]
+    ["/next-challenge" common-interceptors {:any `next-challenge-page}]
     ["/login" common-interceptors {:any `login-page}]
     ["/logout" common-interceptors {:any `logout-page}]
     ["/apps" common-interceptors {:get `apps-page}]
