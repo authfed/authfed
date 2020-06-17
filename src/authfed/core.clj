@@ -263,6 +263,10 @@
  [request]
  (ring-resp/redirect "/start"))
 
+(defn login-page
+ [request]
+ (ring-resp/redirect "/start"))
+
 (defn logout-page
  [request]
  (-> (ring-resp/redirect "/start")
@@ -316,7 +320,7 @@
            (if (every? session ks)
             ctx
             (-> ctx
-             (assoc-in [:response] (ring-resp/redirect "/login"))
+             (assoc-in [:response] (ring-resp/redirect "/start"))
              (assoc-in [:response :flash :error] error-message)))))})
 
 (def routes
@@ -327,6 +331,7 @@
     ["/start" common-interceptors {:any `start-page}]
     ["/challenge/:id" common-interceptors {:any `challenge-page}]
     ["/next-challenge" common-interceptors {:any `next-challenge-page}]
+    ["/login" common-interceptors {:any `login-page}]
     ["/logout" common-interceptors {:any `logout-page}]
     ["/apps" (conj common-interceptors (check [:email :mobile])) {:get `apps-page}]
     ["/apps/:app-id" (conj common-interceptors (check [:email :mobile])) {:get `app-page}]]]))
