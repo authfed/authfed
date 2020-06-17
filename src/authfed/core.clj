@@ -37,14 +37,13 @@
 
 (defn make-sms-challenge [{::keys [session k v]}]
  (let [id (str (java.util.UUID/randomUUID))
-       secret (ot/generate-secret-key)
-       code (delay (ot/get-totp-token secret))]
+       secret (ot/generate-secret-key)]
   {::id id
    ::session session
    ::k k
    ::v v
    ::secret secret
-   ::send! #(sms/send-message! {:to % :message (str "Code is " @code)})
+   ::send! #(sms/send-message! {:to % :message (str "Code is " (ot/get-totp-token secret))})
    ::validator #(when-let [n (parse-int %)]
                  (or (ot/is-valid-totp-token? n secret)
                      (ot/is-valid-totp-token? n secret {:date (Date/from (.plusSeconds (Instant/now) 30))})))}))
