@@ -55,11 +55,6 @@
                {:tag :li :attrs {:class "nav-item"}
                 :content
                 [{:tag :a
-                  :attrs {:class (if (= "/challenges" uri) "nav-link active" "nav-link") :href "/challenges"}
-                  :content ["Challenges"]}]}
-               {:tag :li :attrs {:class "nav-item"}
-                :content
-                [{:tag :a
                   :attrs {:class (if (= "/next-challenge" uri) "nav-link active" "nav-link") :href "/next-challenge"}
                   :content ["Next challenge"]}]}
                {:tag :li :attrs {:class "nav-item"}

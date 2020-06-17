@@ -70,10 +70,11 @@
   [request]
   (let [post-request? (= :post (:request-method request))
         session-id (-> request :cookies (get "ring-session") :value)
-        {:keys [email mobile]} (-> request :form-params)]
+        {:keys [email mobile]} (-> request :form-params)
+        user (->> config/users (filter #(and (= (:email %) email) (= (:mobile %) mobile))) first)]
    (assert session-id)
    (cond
-    post-request?
+    (and post-request? user)
     (do
      (let [ch1 (make-email-challenge {::session session-id ::k :email ::v email})
            ch2 (make-sms-challenge {::session session-id ::k :mobile ::v mobile})]
@@ -81,6 +82,10 @@
       ((::send! ch2) mobile)
       (swap! challenges conj ch1 ch2)
       (ring-resp/redirect "/next-challenge")))
+
+    (and post-request? (nil? user))
+    (-> (ring-resp/redirect "/start")
+      (update :flash assoc :error "User not found."))
 
     true
     (-> [{:tag "form"
@@ -183,35 +188,6 @@
 
     true
     (ring-resp/response "hello world\n"))))
-
-(defn challenges-page
- [request]
- (let [session-id (-> request :cookies (get "ring-session") :value)]
-  (-> (into []
-       (for [{::keys [id k v token secret]} (->> @challenges (filter #(= (::session %) session-id)))]
-        [{:tag "hr" :content [""]}
-         {:tag "a" :attrs {:href (str "/challenge/" id)} :content [(str "Challenge for " (label k))]}
-         {:tag "p" :content [(or token (ot/get-totp-token secret))]}
-         (template/input {:id (name k)
-                          :type "text"
-                          :value v
-                          :disabled true
-                          :label (label k)})
-         {:tag "form"
-          :attrs {:method "POST" :action (str "/challenge/" id)}
-          :content [(template/input {:id "__anti-forgery-token"
-                                     :type "hidden"
-                                     :value (csrf/anti-forgery-token request)})
-                    (template/input {:id "token"
-                                     :type "text"
-                                     :label "Token"})
-                    (template/input {:id "submit"
-                                     :type "submit"
-                                     :classes ["btn" "btn-primary"]
-                                     :value "Confirm challenge"})]}]))
-   (ring-resp/response)
-   (update :body (partial template/html request))
-   (update :body xml/emit-str))))
 
 (defonce pending (atom {}))
 
@@ -406,13 +382,12 @@
    [:net-authfed :https (::config/hostname config/params)
     ["/" common-interceptors {:get `home-page}]
     ["/start" common-interceptors {:any `start-page}]
-    ["/challenges" common-interceptors {:any `challenges-page}]
     ["/challenge/:id" common-interceptors {:any `challenge-page}]
     ["/next-challenge" common-interceptors {:any `next-challenge-page}]
     ["/login" common-interceptors {:any `login-page}]
     ["/logout" common-interceptors {:any `logout-page}]
-    ["/apps" common-interceptors {:get `apps-page}]
-    ["/apps/:app-id" common-interceptors {:get `app-page}]]]))
+    ["/apps" (conj common-interceptors (check [:email :mobile])) {:get `apps-page}]
+    ["/apps/:app-id" (conj common-interceptors (check [:email :mobile])) {:get `app-page}]]]))
 
 (def keystore-password (apply str less.awful.ssl/key-store-password))
 (def keystore-instance
