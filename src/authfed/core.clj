@@ -110,11 +110,40 @@
 
 (defn next-challenge-page
  [request]
- (let [session-id (-> request :cookies (get "ring-session") :value)]
-  (if-let [challenge (->> @challenges (filter #(= (::session %) session-id)) (sort-by ::k) first)]
-   (ring-resp/redirect (str "/challenge/" (::id challenge)))
+ (let [post-request? (= :post (:request-method request))
+       session-id (-> request :cookies (get "ring-session") :value)
+       {::keys [id k v send!] :as challenge}
+       (->> @challenges (filter #(= (::session %) session-id)) (sort-by ::k) first)]
+  (cond
+
+   (nil? challenge)
    (-> (ring-resp/redirect "/apps")
-       (update :flash assoc :info "Welcome! You are now logged in.")))))
+       (update :flash assoc :info "Welcome! You are now logged in."))
+
+   post-request?
+   (do
+    (send! v)
+    (ring-resp/redirect (str "/challenge/" id)))
+
+    true
+    (-> [{:tag "form"
+          :attrs {:method "POST"}
+          :content [(template/input {:id "__anti-forgery-token"
+                                     :type "hidden"
+                                     :value (csrf/anti-forgery-token request)})
+                    (template/input {:id (name k)
+                                     :type "text"
+                                     :disabled true
+                                     :value v
+                                     :label (label k)})
+                    (template/input {:id "submit"
+                                     :type "submit"
+                                     :classes ["btn" "btn-secondary"]
+                                     :autofocus true
+                                     :value "Send confirmation"})]}]
+     (ring-resp/response)
+     (update :body (partial template/html request))
+     (update :body xml/emit-str)))))
 
 (def label {:email "Email" :mobile "Mobile"})
 
