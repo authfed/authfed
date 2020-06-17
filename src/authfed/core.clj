@@ -35,11 +35,12 @@
 (def parse-int
  #(try (new Integer %) (catch NumberFormatException _ nil)))
 
-(defn make-sms-challenge [payload]
+(defn make-sms-challenge [session-id payload]
  (let [id (str (java.util.UUID/randomUUID))
        secret (ot/generate-secret-key)
        code (delay (ot/get-totp-token secret))]
   {::id id
+   ::session-id session-id
    ::secret secret
    ::payload payload
    ::send! #(sms/send-message! {:to % :message (str "Code is " @code)})
@@ -48,11 +49,12 @@
                            (ot/is-valid-totp-token? n secret {:date (Date/from (.plusSeconds (Instant/now) 30))}))
                   payload))}))
 
-(defn make-email-challenge [payload]
+(defn make-email-challenge [session-id payload]
  (let [id (str (java.util.UUID/randomUUID))
        token (str (java.util.UUID/randomUUID))
        expiry (.plusSeconds (Instant/now) 3600)]
   {::id id
+   ::session-id session-id
    ::token token
    ::payload payload
    ::send! #(email/send-message! {:destination {:to-addresses [%]}
@@ -61,7 +63,7 @@
    ::validator #(when (and (= token %) (in-the-future? expiry)) payload)}))
 
 (defonce sessions (atom {}))
-(defonce database (atom {}))
+(defonce challenges (atom #{}))
 
 (defn start-page
   [request]
@@ -72,12 +74,11 @@
    (cond
     post-request?
     (do
-     (let [ch1 (make-email-challenge {:email email})
-           ch2 (make-sms-challenge {:mobile mobile})]
+     (let [ch1 (make-email-challenge session-id {:email email})
+           ch2 (make-sms-challenge session-id {:mobile mobile})]
       ((::send! ch1) email)
       ((::send! ch2) mobile)
-      (swap! database assoc-in [session-id ::challenges (::id ch1)] ch1)
-      (swap! database assoc-in [session-id ::challenges (::id ch2)] ch2)
+      (swap! challenges conj ch1 ch2)
       (ring-resp/redirect "/next-challenge")))
 
     true
@@ -106,7 +107,7 @@
 (defn next-challenge-page
  [request]
  (let [session-id (-> request :cookies (get "ring-session") :value)]
-  (if-let [challenge (-> @database (get session-id) ::challenges vals first)]
+  (if-let [challenge (->> @challenges (filter #(= (::session-id %) session-id)) first)]
    (ring-resp/redirect (str "/challenge/" (::id challenge)))
    (-> (ring-resp/redirect "/apps")
        (update :flash assoc :info "Welcome! You are now logged in.")))))
@@ -117,7 +118,7 @@
         session (-> request :session)
         session-id (-> request :cookies (get "ring-session") :value)
         challenge-id (or (-> request :path-params :id) (-> request :form-params :id))
-        challenge (-> @database (get session-id) ::challenges (get challenge-id))
+        challenge (->> @challenges (filter #(= (::id %) challenge-id)) first)
         token (-> request :form-params :token)]
    (assert (and session-id challenge-id))
    (cond
@@ -125,7 +126,7 @@
     post-request?
     (if-let [payload ((::validator challenge) token)]
      (do
-      (swap! database update-in [session-id ::challenges] dissoc challenge-id)
+      (swap! challenges disj challenge)
       (-> (ring-resp/redirect "/next-challenge")
           (assoc :session (merge session payload))))
      (-> ["empty payload"]
@@ -169,10 +170,9 @@
 
 (defn challenges-page
  [request]
- (let [session-id (-> request :cookies (get "ring-session") :value)
-       challenges (-> @database (get session-id) ::challenges vals)]
+ (let [session-id (-> request :cookies (get "ring-session") :value)]
   (-> (into []
-       (for [{::keys [id payload token secret]} challenges]
+       (for [{::keys [id payload token secret]} (->> @challenges (filter #(= (::session-id %) session-id)))]
         [{:tag "hr" :content [""]}
          {:tag "a" :attrs {:href (str "/challenge/" id)} :content [(str "Challenge for: " payload)]}
          {:tag "p" :content [(or token (ot/get-totp-token secret))]}
