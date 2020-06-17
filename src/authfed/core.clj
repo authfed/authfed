@@ -189,91 +189,6 @@
     true
     (ring-resp/response "hello world\n"))))
 
-(defonce pending (atom {}))
-
-(defn login-page
-  [request]
-  (let [post-request? (= :post (:request-method request))
-        session (:session request)
-        session-id (-> request :cookies (get "ring-session") :value)
-        {:keys [code] :as params} (-> request :form-params)
-        formkey    (first (filter #{:email :mobile} (keys params)))
-        formval    (get params formkey)]
-   (cond
-
-    (and (contains? session :email)
-         (contains? session :mobile))
-    (let [users (into {} (map (juxt #(hash-map :email (:email %) :mobile (:mobile %)) identity) config/users))]
-     (if-let [user (get users (select-keys session [:email :mobile]))]
-      (-> (ring-resp/redirect "/apps")
-          (update :flash assoc :info "Welcome!"))
-      (-> (ring-resp/redirect "/login")
-          (assoc :session {})
-          (update :flash assoc :error "User not found. Access denied."))))
-
-    (and post-request? code)
-    (let [six-digits (try (new Integer code) (catch NumberFormatException _ nil))
-          {::keys [validator k v]} (get @pending session-id)]
-     (if (validator six-digits)
-      (-> (ring-resp/redirect "/login")
-       (assoc :session (assoc session k v))
-       (update :flash assoc :info "Correct! Now your mobile number as well please."))
-      (-> (ring-resp/redirect "/login")
-       (update :flash assoc :error "Incorrect code."))))
-
-    (and post-request? formkey)
-    (let [secret (ot/generate-secret-key)
-          n (ot/get-totp-token secret)]
-     (swap! pending assoc session-id {::validator #(ot/is-valid-totp-token? % secret)
-                                      ::k formkey ::v formval})
-     (case formkey
-      :email (email/send-message! {:message {:subject "Six-digit code for login"
-                                             :body {:text (str "Code is " n)}}
-                                   :destination {:to-addresses [formval]}})
-      :mobile (sms/send-message! {:message (str "Code is " n) :to formval}))
-     (-> (ring-resp/response [{:tag "form"
-                               :attrs {:method "POST" :action "/login"}
-                               :content [(template/input {:id "__anti-forgery-token"
-                                                          :type "hidden"
-                                                          :value (csrf/anti-forgery-token request)})
-                                         (template/input {:id (name formkey)
-                                                          :type "text"
-                                                          :disabled true
-                                                          :value formval
-                                                          :label ({:email "Email" :mobile "Mobile"} formkey)})
-                                         (template/input {:id "code"
-                                                          :type "text"
-                                                          :autofocus true
-                                                          :label "Code"})
-                                         (template/input {:id "submit"
-                                                          :type "submit"
-                                                          :classes ["btn" "btn-primary"]
-                                                          :value "Try six-digit code"})]}])
-      (update :body (partial template/html request))
-      (update :body xml/emit-str)))
-
-    true ;; else
-    (-> (ring-resp/response [{:tag "form"
-                              :attrs {:method "POST" :action "/login"}
-                              :content [(template/input {:id "__anti-forgery-token"
-                                                         :type "hidden"
-                                                         :value (csrf/anti-forgery-token request)})
-                                        (if-not (contains? session :email)
-                                         (template/input {:id "email"
-                                                          :type "text"
-                                                          :autofocus true
-                                                          :label "Email"})
-                                         (template/input {:id "mobile"
-                                                          :type "text"
-                                                          :autofocus true
-                                                          :label "Mobile"}))
-                                        (template/input {:id "submit"
-                                                         :type "submit"
-                                                         :classes ["btn" "btn-primary"]
-                                                         :value "Sign in"})]}])
-     (update :body (partial template/html request))
-     (update :body xml/emit-str)))))
-
 (defn make-saml-handler [config]
  (with-meta
   (fn [email]
@@ -384,7 +299,6 @@
     ["/start" common-interceptors {:any `start-page}]
     ["/challenge/:id" common-interceptors {:any `challenge-page}]
     ["/next-challenge" common-interceptors {:any `next-challenge-page}]
-    ["/login" common-interceptors {:any `login-page}]
     ["/logout" common-interceptors {:any `logout-page}]
     ["/apps" (conj common-interceptors (check [:email :mobile])) {:get `apps-page}]
     ["/apps/:app-id" (conj common-interceptors (check [:email :mobile])) {:get `app-page}]]]))
