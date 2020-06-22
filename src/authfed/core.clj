@@ -165,7 +165,7 @@
     (if ((::validator challenge) token)
      (do
       (swap! challenges disj challenge)
-      (swap! sessions update session assoc k v)
+      (swap! sessions update-in [session ::user] assoc k v)
       (ring-resp/redirect "/next-challenge"))
      (-> ["empty payload"]
          (ring-resp/response)
@@ -239,7 +239,7 @@
 (defn app-page
  [request]
  (let [app-id (-> request :path-params :app-id)
-       email (-> request :session :email)]
+       email (-> request :session ::user :email)]
   (assert (and app-id email))
   (-> ((get saml-apps app-id) email)
    (update :body (partial template/html request))
@@ -247,7 +247,7 @@
 
 (defn apps-page
  [request]
- (let [email (-> request :session :email)]
+ (let [email (-> request :session ::user :email)]
   (-> (ring-resp/response
        [{:tag "ul"
          :content (for [k (keys saml-apps)]
@@ -314,8 +314,8 @@
 (defn check [ks]
  {:name (keyword (gensym "require-"))
   :enter (fn [ctx]
-          (let [session (:session (:request ctx))]
-           (if (every? session ks)
+          (let [user (-> ctx :request :session ::user)]
+           (if (every? user ks)
             ctx
             (-> ctx
              (assoc-in [:response] (ring-resp/redirect "/start"))
