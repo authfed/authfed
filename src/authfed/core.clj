@@ -27,7 +27,7 @@
             [ring.util.codec :as codec]
             [ring.util.response :as ring-resp]))
 
-(def label {:email "Email" :mobile "Mobile"})
+(def label {::email "Email" ::mobile "Mobile"})
 
 (def in-the-future?
  #(if (instance? Instant %)
@@ -77,8 +77,8 @@
    (cond
     (and post-request? user)
     (do
-     (let [ch1 (make-email-challenge {::session session-id ::k :email ::v email})
-           ch2 (make-sms-challenge {::session session-id ::k :mobile ::v mobile})]
+     (let [ch1 (make-email-challenge {::session session-id ::k ::email ::v email})
+           ch2 (make-sms-challenge {::session session-id ::k ::mobile ::v mobile})]
       (swap! challenges conj ch1 ch2)
       (ring-resp/redirect "/next-challenge")))
 
@@ -165,14 +165,14 @@
     (if ((::validator challenge) token)
      (do
       (swap! challenges disj challenge)
-      (swap! sessions update-in [session ::user] assoc k v)
+      (swap! sessions update session assoc k v)
       (ring-resp/redirect "/next-challenge"))
      (-> ["empty payload"]
          (ring-resp/response)
          (update :body (partial template/html (update request :flash assoc :error "Problem with token.")))
          (update :body xml/emit-str)))
 
-    (= k :email)
+    (= k ::email)
     (-> [(p "An email has been sent to " (i v) ".")
          (p "Please copy and paste the confirmation token from that email to continue to the next challenge.")
          {:tag "form"
@@ -192,7 +192,7 @@
      (update :body (partial template/html request))
      (update :body xml/emit-str))
 
-    (= k :mobile)
+    (= k ::mobile)
     (-> [(p "A six-digit code has been sent to " (i v) ".")
          (p "Please type that code the box below to complete the sign-in process.")
          {:tag "form"
@@ -239,7 +239,7 @@
 (defn app-page
  [request]
  (let [app-id (-> request :path-params :app-id)
-       email (-> request :session ::user :email)]
+       email (-> request :session ::email)]
   (assert (and app-id email))
   (-> ((get saml-apps app-id) email)
    (update :body (partial template/html request))
@@ -247,7 +247,7 @@
 
 (defn apps-page
  [request]
- (let [email (-> request :session ::user :email)]
+ (let [email (-> request :session ::email)]
   (-> (ring-resp/response
        [{:tag "ul"
          :content (for [k (keys saml-apps)]
@@ -314,8 +314,8 @@
 (defn check [ks]
  {:name (keyword (gensym "require-"))
   :enter (fn [ctx]
-          (let [user (-> ctx :request :session ::user)]
-           (if (every? user ks)
+          (let [session (-> ctx :request :session)]
+           (if (every? session ks)
             ctx
             (-> ctx
              (assoc-in [:response] (ring-resp/redirect "/start"))
@@ -331,8 +331,8 @@
     ["/next-challenge" common-interceptors {:any `next-challenge-page}]
     ["/login" common-interceptors {:any `login-page}]
     ["/logout" common-interceptors {:any `logout-page}]
-    ["/apps" (conj common-interceptors (check [:email :mobile])) {:get `apps-page}]
-    ["/apps/:app-id" (conj common-interceptors (check [:email :mobile])) {:get `app-page}]]]))
+    ["/apps" (conj common-interceptors (check [::email ::mobile])) {:get `apps-page}]
+    ["/apps/:app-id" (conj common-interceptors (check [::email ::mobile])) {:get `app-page}]]]))
 
 (def keystore-password (apply str less.awful.ssl/key-store-password))
 (def keystore-instance

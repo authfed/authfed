@@ -37,8 +37,8 @@
 
 (defn nav [request]
  (let [uri (:uri request)
-       logged-in? (and (contains? (:authfed.core/user (:session request)) :email)
-                       (contains? (:authfed.core/user (:session request)) :mobile))]
+       logged-in? (and (contains? (:session request) :authfed.core/email)
+                       (contains? (:session request) :authfed.core/mobile))]
   {:tag :div :attrs {:class "container" :style "margin-top: 20px;"}
    :content [{:tag :ul :attrs {:class "nav nav-pills"}
               :content
