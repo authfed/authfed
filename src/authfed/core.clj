@@ -247,13 +247,14 @@
 
 (defn apps-page
  [request]
- (let [email (-> request :session ::email)]
-  (-> (ring-resp/response
-       [{:tag "ul"
-         :content (for [k (keys saml-apps)]
-                   {:tag "li"
-                    :content [{:tag "a" :attrs {:href (str "/apps/" k)}
-                               :content [(::saml/name (meta (saml-apps k)))]}]})}])
+ (let [email (-> request :session ::email)
+       apps (filter (constantly true) saml-apps)]
+  (-> [{:tag "ul"
+        :content (for [[k v] apps]
+                  {:tag "li"
+                   :content [{:tag "a" :attrs {:href (str "/apps/" k)}
+                              :content [(-> v meta ::saml/name)]}]})}]
+   (ring-resp/response)
    (update :body (partial template/html request))
    (update :body xml/emit-str))))
 
