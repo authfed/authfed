@@ -72,21 +72,17 @@
   (let [post-request? (= :post (:request-method request))
         session-id (-> request :cookies (get "ring-session") :value)
         {:keys [email mobile]} (-> request :form-params)
-        user (->> config/users (filter #(and (= (:email %) email) (= (:mobile %) mobile))) first)]
-   (assert session-id)
-   (cond
-    (and post-request? user)
-    (do
-     (let [ch1 (make-email-challenge {::session session-id ::k ::email ::v email})
-           ch2 (make-sms-challenge {::session session-id ::k ::mobile ::v mobile})]
-      (swap! challenges conj ch1 ch2)
-      (ring-resp/redirect "/next-challenge")))
-
-    (and post-request? (nil? user))
-    (-> (ring-resp/redirect "/start")
-      (update :flash assoc :error "User not found."))
-
-    true
+        [user & _] (filter #(and (= (:email %) email) (= (:mobile %) mobile)) config/users)
+        _ (assert session-id)]
+   (if post-request?
+    (if (nil? user)
+     (-> (ring-resp/redirect "/start")
+       (update :flash assoc :error "User not found."))
+     (do
+      (let [ch1 (make-email-challenge {::session session-id ::k ::email ::v email})
+            ch2 (make-sms-challenge {::session session-id ::k ::mobile ::v mobile})]
+       (swap! challenges conj ch1 ch2)
+       (ring-resp/redirect "/next-challenge"))))
     (-> [{:tag "form"
           :attrs {:method "POST" :action "/start"}
           :content [(template/input {:id "__anti-forgery-token"
