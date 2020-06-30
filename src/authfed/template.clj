@@ -73,6 +73,9 @@
               :content [;; {:tag "pre" :attrs {:style "width:100%;"} :content [(with-out-str (pprint/pprint (:session request)))]}
                         ;; (nav request)
                         {:tag "div"
+                         :attrs {:class "container" :style "text-align: center; margin-top: 2em;"}
+                         :content [{:tag "h2" :attrs {:style "color:rgb(62, 105, 220); font-weight: bold; font-family:Poppins;"} :content ["Authfed"]}]}
+                        {:tag "div"
                          :attrs {:class "container"
                                  :style "margin-top: 40px;"}
                          :content (cons (flash-message request) body)}]}]}))
