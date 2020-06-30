@@ -3,10 +3,12 @@
  (:require [clojure.edn :as edn]
            [clojure.data.json :as json]))
 
+(def basedir "/etc/authfed/")
+
 (defn- load-config
  "Load from /etc/authfed if possible or config/ as a fallback."
  [s]
- (let [prod (str "/etc/authfed/" s)
+ (let [prod (str basedir s)
        dev  (str "config/" s)
        path (try (.getPath (doto (new File prod) slurp))
              (catch FileNotFoundException _ dev))]
@@ -33,7 +35,7 @@
  {::hostname (if mac? "localhost" "authfed.net")
   ::letsencrypt (if mac?
                  ["dummy"]
-                 (->> (new java.io.File "/etc/authfed")
+                 (->> (new java.io.File basedir)
                   .listFiles
                   (map #(.getName %))
                   (filter #(or (.endsWith % "-fullchain.pem")

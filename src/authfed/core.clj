@@ -15,10 +15,12 @@
             [one-time.core :as ot]
             [authfed.saml :as saml]
             [authfed.config :as config]
+            [authfed.util :as util]
             [authfed.template :as template]
             [authfed.email :as email]
             [authfed.sms :as sms]
             [clojure.data.xml :as xml]
+            [clojure.data.json :as json]
             [clojure.java.io :as io]
             [clojure.set :as set]
             [clojure.pprint :refer [pprint]]
@@ -318,9 +320,21 @@
              (assoc-in [:response] (ring-resp/redirect "/start"))
              (assoc-in [:response :flash :error] error-message)))))})
 
+(defn config-page [req]
+ (let [post-request? (= :post (:request-method req))]
+  (when post-request?
+   (load-file "src/authfed/config.clj"))
+  (-> (into {}
+       (map #(vector (.getName %) (util/md5 (slurp (.getPath %))))
+        (.listFiles (new java.io.File config/basedir))))
+   (json/write-str)
+   (ring-resp/response)
+   (ring-resp/content-type "application/json"))))
+
 (def routes
  (route/expand-routes
   [[:catch-all ["/" {:get `apex-redirects}]]
+   [:config ["/config" {:get `config-page}]]
    [:net-authfed :https (::config/hostname config/params)
     ["/" common-interceptors {:get `home-page}]
     ["/start" common-interceptors {:any `start-page}]
