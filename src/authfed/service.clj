@@ -43,7 +43,7 @@
 
 (def service
   {:env :prod
-   ::http/routes routes
+   ::http/routes #(route/expand-routes (deref #'routes))
    ::http/resource-path "/public"
    ::http/type :jetty
    ::http/host "0.0.0.0"
