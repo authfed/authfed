@@ -5,10 +5,10 @@
 Start a REPL using `clj -A:dev` then run:
 
 ```clj
-(ns authfed.core)
+(ns authfed.server)
 (use 'clojure.repl 'clojure.pprint 'clojure.java.javadoc)
-(load-file "src/authfed/core.clj")
-(http/start runnable)
+(load-file "src/authfed/server.clj")
+(http/start runnable-service)
 ```
 
 And then point your web browser to https://localhost:8443/
