@@ -76,8 +76,7 @@
   (let [post-request? (= :post (:request-method request))
         session-id (-> request :cookies (get "ring-session") :value)
         email (-> request :form-params :email)
-        users (into {} (map (juxt :email identity) config/users))
-        user (get users email)
+        user (get config/users email)
         _ (assert session-id)]
    (if post-request?
     (if (nil? user)
@@ -126,8 +125,7 @@
    (and (nil? challenge)
         (not (contains? (:session request) ::mobile)))
    (if-let [email (-> request :session ::email)]
-    (let [users (into {} (map (juxt :email identity) config/users))
-          mobile (-> users (get email) :mobile)
+    (let [mobile (-> config/users (get email) :mobile)
           ch (make-sms-challenge {::session session-id ::k ::mobile ::v mobile})]
      (swap! challenges conj ch)
      (ring-resp/redirect "/next-challenge")))
