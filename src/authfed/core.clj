@@ -30,6 +30,9 @@
 
 (def label {::email "Email" ::mobile "Mobile"})
 
+(defn logged-in? [session]
+ (every? session [::email ::mobile]))
+
 (def in-the-future?
  #(if (instance? Instant %)
    (.before (new Date) (Date/from %))
@@ -116,11 +119,12 @@
     (send! v)
     (ring-resp/redirect (str "/challenge/" id)))
 
-   (and (nil? challenge) (every? (:session request) [::email ::mobile]))
+   (and (nil? challenge) (logged-in? (:session request)))
    (-> (ring-resp/redirect "/apps")
        (update :flash assoc :info "Welcome! You are now logged in."))
 
-   (and (nil? challenge) (not (contains? (:session request) ::mobile)))
+   (and (nil? challenge)
+        (not (contains? (:session request) ::mobile)))
    (if-let [email (-> request :session ::email)]
     (let [users (into {} (map (juxt :email identity) config/users))
           mobile (-> users (get email) :mobile)
@@ -311,20 +315,18 @@
  {:name (keyword (gensym "remove-prefix-"))
   :enter (fn [ctx] (update-in ctx [:request :path-info] #(.substring % (count s))))})
 
-(def error-message
- {:tag "span"
-  :content [{:tag "strong" :content ["Error: "]}
-            "please log in."]})
-
-(defn check [ks]
- {:name (keyword (gensym "require-"))
-  :enter (fn [ctx]
-          (let [session (-> ctx :request :session)]
-           (if (every? session ks)
-            ctx
-            (-> ctx
-             (assoc-in [:response] (ring-resp/redirect "/start"))
-             (assoc-in [:response :flash :error] error-message)))))})
+(def check-logged-in
+ (let [error-message {:tag "span"
+                      :content [{:tag "strong" :content ["Error: "]}
+                                "please log in."]}]
+  {:name (keyword (gensym "check-logged-in-"))
+   :enter (fn [ctx]
+           (let [session (-> ctx :request :session)]
+            (if (logged-in? session)
+             ctx
+             (-> ctx
+              (assoc-in [:response] (ring-resp/redirect "/start"))
+              (assoc-in [:response :flash :error] error-message)))))}))
 
 (defn config-page [req]
  (let [post-request? (= :post (:request-method req))]

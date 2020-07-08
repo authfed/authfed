@@ -21,8 +21,8 @@
     ["/next-challenge" interceptors {:any `core/next-challenge-page}]
     ["/login" interceptors {:any `core/login-page}]
     ["/logout" interceptors {:any `core/logout-page}]
-    ["/apps" (conj interceptors (core/check [::core/email ::core/mobile])) {:get `core/apps-page}]
-    ["/apps/:app-id" (conj interceptors (core/check [::core/email ::core/mobile])) {:get `core/app-page}]]]))
+    ["/apps" (conj interceptors core/check-logged-in) {:get `core/apps-page}]
+    ["/apps/:app-id" (conj interceptors core/check-logged-in) {:get `core/app-page}]]]))
 
 (def keystore-password (apply str less.awful.ssl/key-store-password))
 (def keystore-instance
