@@ -93,10 +93,6 @@
                                      :type "text"
                                      :autofocus true
                                      :label "Email"})
-                    (-> (template/input {:id "password"
-                                         :type "password"
-                                         :label "Password"})
-                     (update :attrs assoc :style "display:none;"))
                     (template/input {:id "submit"
                                      :type "submit"
                                      :classes ["btn" "btn-primary"]
