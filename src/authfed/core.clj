@@ -75,26 +75,24 @@
   [request]
   (let [post-request? (= :post (:request-method request))
         session-id (-> request :cookies (get "ring-session") :value)
-        email (-> request :form-params :email)
-        user (get config/users email)
+        username (-> request :form-params :username)
+        user (get config/users username)
         _ (assert session-id)]
    (if post-request?
     (if (nil? user)
      (-> (ring-resp/redirect "/start")
        (update :flash assoc :error "User not found."))
-     (do
-      (let [ch (make-email-challenge {::session session-id ::k ::email ::v email})]
-       (swap! challenges conj ch)
-       (ring-resp/redirect "/next-challenge"))))
+     (-> (ring-resp/redirect "/next-challenge")
+       (update :session assoc ::username username)))
     (-> [{:tag "form"
           :attrs {:method "POST" :action "/start"}
           :content [(template/input {:id "__anti-forgery-token"
                                      :type "hidden"
                                      :value (csrf/anti-forgery-token request)})
-                    (template/input {:id "email"
+                    (template/input {:id "username"
                                      :type "text"
                                      :autofocus true
-                                     :label "Email"})
+                                     :label "Username"})
                     (template/input {:id "submit"
                                      :type "submit"
                                      :classes ["btn" "btn-primary"]
@@ -106,6 +104,7 @@
 (defn next-challenge-page
  [request]
  (let [post-request? (= :post (:request-method request))
+       session (-> request :session)
        session-id (-> request :cookies (get "ring-session") :value)
        {::keys [id k v send!] :as challenge}
        (->> @challenges (filter #(= (::session %) session-id)) (sort-by ::k) first)
@@ -118,17 +117,25 @@
     (send! v)
     (ring-resp/redirect (str "/challenge/" id)))
 
-   (and (nil? challenge) (logged-in? (:session request)))
+   (logged-in? session)
    (-> (ring-resp/redirect "/apps")
        (update :flash assoc :info "Welcome! You are now logged in."))
 
-   (and (nil? challenge)
-        (not (contains? (:session request) ::mobile)))
-   (if-let [email (-> request :session ::email)]
-    (let [mobile (-> config/users (get email) :mobile)
-          ch (make-sms-challenge {::session session-id ::k ::mobile ::v mobile})]
+   (and (nil? challenge) (-> session ::email nil?))
+   (if-let [email (-> session ::username config/users :email)]
+    (let [ch (make-email-challenge {::session session-id ::k ::email ::v email})]
      (swap! challenges conj ch)
-     (ring-resp/redirect "/next-challenge")))
+     (ring-resp/redirect "/next-challenge"))
+    (-> (ring-resp/redirect "/start")
+        (update :flash assoc :error "Could not find email address.")))
+
+   (and (nil? challenge) (-> session ::mobile nil?))
+   (if-let [mobile (-> session ::username config/users :mobile)]
+    (let [ch (make-sms-challenge {::session session-id ::k ::mobile ::v mobile})]
+     (swap! challenges conj ch)
+     (ring-resp/redirect "/next-challenge"))
+    (-> (ring-resp/redirect "/start")
+        (update :flash assoc :error "Could not find mobile number.")))
 
     true
     (-> [{:tag "form"
