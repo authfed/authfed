@@ -114,6 +114,12 @@
        _ (assert session-id)]
   (cond
 
+   post-request?
+   (do
+    (assert challenge)
+    (send! v)
+    (ring-resp/redirect (str "/challenge/" id)))
+
    (and (nil? challenge) (every? (:session request) [::email ::mobile]))
    (-> (ring-resp/redirect "/apps")
        (update :flash assoc :info "Welcome! You are now logged in."))
@@ -125,11 +131,6 @@
           ch (make-sms-challenge {::session session-id ::k ::mobile ::v mobile})]
      (swap! challenges conj ch)
      (ring-resp/redirect "/next-challenge")))
-
-   post-request?
-   (do
-    (send! v)
-    (ring-resp/redirect (str "/challenge/" id)))
 
     true
     (-> [{:tag "form"
