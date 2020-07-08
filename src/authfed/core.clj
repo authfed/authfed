@@ -64,7 +64,7 @@
    ::v v
    ::token token
    ::send! #(email/send-message! {:destination {:to-addresses [%]}
-                                  :message {:subject "Confirmation token for sign-in"
+                                  :message {:subject "Confirmation token for login"
                                             :body {:text token :html token}}})
    ::validator #(and (= token %) (in-the-future? expiry))}))
 
@@ -96,7 +96,7 @@
                     (template/input {:id "submit"
                                      :type "submit"
                                      :classes ["btn" "btn-primary"]
-                                     :value "Start sign-in process"})]}]
+                                     :value "Log in"})]}]
      (ring-resp/response)
      (update :body (partial template/html request))
      (update :body xml/emit-str)))))
@@ -207,7 +207,7 @@
 
     (= k ::mobile)
     (-> [(p "A six-digit code has been sent to " (i v) ".")
-         (p "Please type that code the box below to complete the sign-in process.")
+         (p "Please type that code the box below to complete the login process.")
          {:tag "form"
           :attrs {:method "POST"}
           :content [(template/input {:id "__anti-forgery-token"
