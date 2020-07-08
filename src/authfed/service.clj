@@ -11,17 +11,18 @@
 (def interceptors core/common-interceptors)
 
 (def routes
- [[:catch-all ["/" {:get `core/apex-redirects}]]
-  [:config ["/config" {:get `core/config-page}]]
-  [:net-authfed :https (::config/hostname config/params)
-   ["/" interceptors {:get `core/home-page}]
-   ["/start" interceptors {:any `core/start-page}]
-   ["/challenge/:id" interceptors {:any `core/challenge-page}]
-   ["/next-challenge" interceptors {:any `core/next-challenge-page}]
-   ["/login" interceptors {:any `core/login-page}]
-   ["/logout" interceptors {:any `core/logout-page}]
-   ["/apps" (conj interceptors (core/check [::core/email ::core/mobile])) {:get `core/apps-page}]
-   ["/apps/:app-id" (conj interceptors (core/check [::core/email ::core/mobile])) {:get `core/app-page}]]])
+ (route/expand-routes
+  [[:catch-all ["/" {:get `core/apex-redirects}]]
+   [:config ["/config" {:get `core/config-page}]]
+   [:net-authfed :https (::config/hostname config/params)
+    ["/" interceptors {:get `core/home-page}]
+    ["/start" interceptors {:any `core/start-page}]
+    ["/challenge/:id" interceptors {:any `core/challenge-page}]
+    ["/next-challenge" interceptors {:any `core/next-challenge-page}]
+    ["/login" interceptors {:any `core/login-page}]
+    ["/logout" interceptors {:any `core/logout-page}]
+    ["/apps" (conj interceptors (core/check [::core/email ::core/mobile])) {:get `core/apps-page}]
+    ["/apps/:app-id" (conj interceptors (core/check [::core/email ::core/mobile])) {:get `core/app-page}]]]))
 
 (def keystore-password (apply str less.awful.ssl/key-store-password))
 (def keystore-instance
@@ -43,7 +44,7 @@
 
 (def service
   {:env :prod
-   ::http/routes #(route/expand-routes (deref #'routes))
+   ::http/routes #(deref #'routes)
    ::http/resource-path "/public"
    ::http/type :jetty
    ::http/host "0.0.0.0"

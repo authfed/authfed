@@ -18,7 +18,7 @@
               ::http/join? false
               ;; Routes can be a function that resolve routes,
               ;;  we can use this to set the routes to be reloadable
-              ::http/routes #(route/expand-routes (deref #'service/routes))
+              ::http/routes #(deref #'service/routes)
               ;; all origins are allowed in dev mode
               ::http/allowed-origins {:creds true :allowed-origins (constantly true)}
               ;; Content Security Policy (CSP) is mostly turned off in dev mode
