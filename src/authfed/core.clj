@@ -143,7 +143,7 @@
           :content [(template/input {:id "__anti-forgery-token"
                                      :type "hidden"
                                      :value (csrf/anti-forgery-token request)})
-                    (template/input {:id (name k)
+                    (template/input {:id "__unused"
                                      :type "text"
                                      :disabled true
                                      :value v
