@@ -107,9 +107,12 @@
        session (-> request :session)
        session-id (-> request :cookies (get "ring-session") :value)
        {::keys [id k v send!] :as challenge}
-       (->> @challenges (filter #(= (::session %) session-id)) (sort-by ::k) first)
-       _ (assert session-id)]
+       (->> @challenges (filter #(= (::session %) session-id)) (sort-by ::k) first)]
   (cond
+
+   (nil? session-id)
+   (-> (ring-resp/redirect "/start")
+       (update :flash assoc :error "Something went wrong (missing session cookie)."))
 
    post-request?
    (do
