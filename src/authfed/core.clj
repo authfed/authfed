@@ -76,8 +76,7 @@
   (let [post-request? (= :post (:request-method request))
         session-id (-> request :cookies (get "ring-session") :value)
         username (-> request :form-params :username)
-        user (get config/users username)
-        _ (assert session-id)]
+        user (get config/users username)]
    (if post-request?
     (if (nil? user)
      (-> (ring-resp/redirect "/start")
