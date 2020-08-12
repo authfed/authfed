@@ -302,9 +302,19 @@
 ;              (assoc-in [:response] (ring-resp/redirect "/login"))
 ;              (assoc-in [:response :flash :error] error-message)))))})
 
+(def extra-long-sessions
+{:name (keyword (gensym "extra-long-sessions-"))
+ :leave (fn [ctx]
+         (let [kseq [:response :headers "Set-Cookie"]
+               one-month (* 60 60 24 30)]
+          (if-let [[c & _] (get-in ctx kseq)]
+           (assoc-in ctx kseq (str c ";Max-Age=" one-month))
+           ctx)))})
+
 (def common-interceptors
  ^:interceptors
  [(body-params/body-params)
+  extra-long-sessions
   (middlewares/session {:store (memory/memory-store sessions)})
   (middlewares/flash)
   (csrf/anti-forgery)
