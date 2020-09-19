@@ -74,7 +74,9 @@
                         ;; (nav request)
                         {:tag "div"
                          :attrs {:class "container" :style "text-align: center; margin-top: 2em;"}
-                         :content [{:tag "h2" :attrs {:style "color:rgb(62, 105, 220); font-weight: bold; font-family:Poppins;"} :content ["Authfed"]}]}
+                         :content [{:tag "h2"
+                                    :attrs {:style "color:rgb(62, 105, 220); font-weight: bold; font-family:Poppins;"}
+                                    :content [{:tag "a" :attrs {:href "/apps"} :content ["Authfed"]}]}]}
                         {:tag "div"
                          :attrs {:class "container"
                                  :style "margin-top: 40px;"}
