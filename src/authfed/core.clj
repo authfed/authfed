@@ -22,6 +22,7 @@
             [clojure.data.json :as json]
             [clojure.java.io :as io]
             [clojure.set :as set]
+            [clojure.edn :as edn]
             [clojure.pprint :refer [pprint]]
             [ring.middleware.resource :as resource]
             [ring.middleware.session.memory :as memory]
@@ -68,8 +69,17 @@
                                             :body {:text token :html token}}})
    ::validator #(and (= token %) (in-the-future? expiry))}))
 
-(defonce sessions (atom {}))
 (defonce challenges (atom #{}))
+
+(defonce sessions
+ (atom
+  (try
+   (edn/read-string (slurp "sessions.edn"))
+   (catch Exception _ {}))))
+
+(add-watch sessions "save-to-disk"
+ (fn [k r o n]
+  (spit "sessions.edn" n)))
 
 (defn start-page
   [request]
