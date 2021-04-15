@@ -32,7 +32,7 @@
 ;    (catch Exception e "1234"))))
 
 (def params
- {::hostname (if mac? "localhost" "authfed.net")
+ {::hostname (if mac? "localhost" "login.structmap.com")
   ::letsencrypt (if mac?
                  ["dummy"]
                  (->> (new java.io.File basedir)
